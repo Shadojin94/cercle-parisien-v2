@@ -271,10 +271,11 @@ function createToolHandlers(deps) {
 
         return {
           success: true,
+          action_type: 'payment_link',  // Pour afficher un bouton dans le frontend
           url: session.url,
           plan_name: plan.name,
           price: plan.price,
-          message: `Voici ton lien de paiement pour ${plan.name} (${plan.price}€) : ${session.url}`
+          message: `Super ! Clique sur le bouton pour réserver ta place.`
         };
 
       } catch (err) {
