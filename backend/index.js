@@ -258,7 +258,7 @@ app.post('/api/checkout-3mo', async (req, res) => {
     res.json({ success: true, sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('Erreur création checkout 3 mois:', error);
-    res.status(500).json({ error: 'Erreur création session de paiement' });
+    res.status(500).json({ error: 'Erreur création session de paiement', details: error.message });
   }
 });
 
@@ -393,7 +393,7 @@ app.post('/api/checkout', async (req, res) => {
     res.json({ success: true, sessionId: session.id, url: session.url });
   } catch (error) {
     console.error('Erreur création checkout:', error);
-    res.status(500).json({ error: 'Erreur création session de paiement' });
+    res.status(500).json({ error: 'Erreur création session de paiement', details: error.message });
   }
 });
 
