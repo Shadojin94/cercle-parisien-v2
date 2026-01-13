@@ -172,120 +172,7 @@ function generateICS(firstName, email) {
 // ROUTES API
 // ===============================
 
-/**
- * GET /api/debug-stripe
- * Route de diagnostic pour tester la configuration Stripe
- */
-app.get('/api/debug-stripe', async (req, res) => {
-  const results = {
-    checks: [],
-    env: {
-      STRIPE_SECRET_KEY_EXISTS: !!process.env.STRIPE_SECRET_KEY,
-      STRIPE_SECRET_KEY_PREFIX: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...' : 'NONE',
-      PORT: process.env.PORT,
-      FRONTEND_URL: process.env.FRONTEND_URL
-    }
-  };
-
-  try {
-    // 1. Test de connexion basique (Balance)
-    try {
-      const balance = await stripe.balance.retrieve();
-      results.checks.push({ name: 'Stripe Connection', status: 'OK', detail: 'Balance retrieved' });
-    } catch (e) {
-      results.checks.push({ name: 'Stripe Connection', status: 'ERROR', detail: e.message });
-      throw new Error('Connexion Stripe impossible: ' + e.message);
-    }
-
-    // 2. Vérification des Plans (Price IDs)
-    const priceIdsToCheck = [
-      'price_1S8fhXFvnccm1W1dXlCxUlbV', // Cours d'essai
-      'price_1SE5fLFvnccm1W1d6bghBCkt', // Annuel
-      'price_1S8fkYFvnccm1W1dI5RhgQlT'  // Trimestriel
-    ];
-
-    for (const id of priceIdsToCheck) {
-      try {
-        const price = await stripe.prices.retrieve(id);
-        results.checks.push({ name: `Price Check: ${id}`, status: 'OK', detail: `Found: ${price.active ? 'Active' : 'Archived'} (${price.unit_amount / 100} ${price.currency})` });
-      } catch (e) {
-        results.checks.push({ name: `Price Check: ${id}`, status: 'ERROR', detail: e.message });
-      }
-    }
-
-    // 3. Test de création de session (mode setup pour ne pas facturer)
-    try {
-      const session = await stripe.checkout.sessions.create({
-        mode: 'setup',
-        currency: 'eur',
-        customer_email: 'test-debug@cercle-parisien.com',
-        success_url: `${process.env.FRONTEND_URL || 'http://localhost:3003'}/success`,
-        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3003'}/cancel`,
-      });
-      results.checks.push({ name: 'Checkout Session Create (Setup Mode)', status: 'OK', detail: `Session ID: ${session.id}` });
-    } catch (e) {
-      results.checks.push({ name: 'Checkout Session Create', status: 'ERROR', detail: e.message });
-    }
-
-    res.json(results);
-
-  } catch (globalError) {
-    results.globalError = globalError.message;
-    res.status(500).json(results);
-  }
-});
-
-/**
- * GET /api/debug-email
- * Route de diagnostic pour tester la configuration Email (SMTP)
- */
-app.get('/api/debug-email', async (req, res) => {
-  const results = {
-    checks: [],
-    env: {
-      SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
-      SMTP_PORT: process.env.SMTP_PORT || '465 (default)',
-      SMTP_USER: process.env.SMTP_USER ? 'CONFIGURED' : 'MISSING',
-      SMTP_PASS: process.env.SMTP_PASS ? '*******' : 'MISSING'
-    }
-  };
-
-  try {
-    // 1. Vérification de la configuration connection
-    try {
-      await transporter.verify();
-      results.checks.push({ name: 'SMTP Connection', status: 'OK', detail: 'Ready to send messages' });
-    } catch (e) {
-      results.checks.push({ name: 'SMTP Connection', status: 'ERROR', detail: e.message });
-      throw new Error('Connexion SMTP impossible: ' + e.message);
-    }
-
-    // 2. Envoi d'un email de test (si param ?to=email fourni, sinon au SMTP_USER)
-    const testRecipient = req.query.to || process.env.SMTP_USER;
-    if (testRecipient) {
-      try {
-        const info = await transporter.sendMail({
-          from: process.env.SMTP_FROM || process.env.SMTP_USER,
-          to: testRecipient,
-          subject: 'Test Email - Cercle Parisien JKD',
-          text: 'Si vous recevez ceci, la configuration email fonctionne sur Coolify !',
-          html: '<h1>Configuration Email OK</h1><p>Le serveur peut envoyer des emails.</p>'
-        });
-        results.checks.push({ name: `Send Email to ${testRecipient}`, status: 'OK', detail: `Message ID: ${info.messageId}` });
-      } catch (e) {
-        results.checks.push({ name: `Send Email to ${testRecipient}`, status: 'ERROR', detail: e.message });
-      }
-    } else {
-      results.checks.push({ name: 'Send Email', status: 'SKIPPED', detail: 'No recipient (SMTP_USER not set and no ?to= param)' });
-    }
-
-    res.json(results);
-
-  } catch (globalError) {
-    results.globalError = globalError.message;
-    res.status(500).json(results);
-  }
-});
+// Routes debug supprimées pour production
 
 /**
  * POST /api/checkout-3mo
@@ -609,6 +496,23 @@ async function handleStripeWebhook(req, res) {
               // Envoyer l'email
               const info = await transporter.sendMail(mailOptions);
               console.log('Email de confirmation envoyé:', info.messageId, 'à', lead.email);
+
+              // Notification Admin
+              try {
+                await transporter.sendMail({
+                  from: process.env.SMTP_FROM || process.env.SMTP_USER,
+                  to: process.env.SMTP_USER, // Envoi à l'admin
+                  subject: `💰 Nouvelle Inscription Payée : ${lead.first_name}`,
+                  html: `<h1>Nouveau Paiement Reçu</h1>
+                         <p><strong>Client :</strong> ${lead.first_name} (${lead.email})</p>
+                         <p><strong>Montant :</strong> ${(session.amount_total / 100).toFixed(2)} €</p>
+                         <p><strong>Téléphone :</strong> ${lead.phone}</p>
+                         <p>Consultez PocketBase pour plus de détails.</p>`
+                });
+                console.log('Notification Admin envoyée (Paiement)');
+              } catch (adminErr) {
+                console.error('Erreur notification admin (Paiement):', adminErr);
+              }
             } catch (emailError) {
               console.error('Erreur envoi email de confirmation:', emailError);
               // Pour retry: pourrait ajouter à une queue de retry
@@ -845,6 +749,90 @@ app.get('/api/get-lead', async (req, res) => {
   } catch (error) {
     console.error('Erreur get lead:', error);
     res.status(500).json({ success: false, error: 'Erreur serveur' });
+  }
+});
+
+/**
+ * POST /api/confirm-free
+ * Confirm free trial without payment
+ */
+app.post('/api/confirm-free', async (req, res) => {
+  try {
+    if (!pb) {
+      return res.status(503).json({ error: 'Service PocketBase non disponible' });
+    }
+
+    const { leadId } = req.body;
+
+    if (!leadId) {
+      return res.status(400).json({ error: 'Lead ID requis' });
+    }
+
+    // Update status
+    await updateLeadStatus(leadId, 'confirmed_free');
+
+    // Fetch lead for email
+    const { data: lead, error: leadError } = await getLeadById(leadId);
+
+    if (leadError || !lead) {
+      return res.status(500).json({ error: 'Lead not found' });
+    }
+
+    // Generate ICS
+    const icsContent = generateICS(lead.first_name, lead.email);
+
+    // Prepare email
+    const mailOptions = {
+      from: process.env.SMTP_FROM || process.env.SMTP_USER,
+      to: lead.email,
+      subject: 'Confirmation d\'inscription gratuite - Cercle Parisien JKD',
+      html: `
+        <h1>Bienvenue ${lead.first_name} !</h1>
+        <p>Votre inscription gratuite a été confirmée.</p>
+        <p><strong>Rendez-vous pour votre cours d'essai :</strong></p>
+        <ul>
+          <li><strong>Date :</strong> Samedi 27 septembre 2025</li>
+          <li><strong>Heure :</strong> 14h00 - 16h00</li>
+          <li><strong>Adresse :</strong> 119 Av. du Général Leclerc, 75014 Paris</li>
+          <li><strong>Téléphone :</strong> 06 50 75 43 89</li>
+        </ul>
+        <p><a href="https://maps.google.com/?q=119+Av.+du+G%C3%A9n%C3%A9ral+Leclerc,+75014+Paris" target="_blank">Ouvrir dans Google Maps</a></p>
+        <p>Nous avons hâte de vous accueillir !</p>
+        <p>Cordialement,<br>L'équipe du Cercle Parisien JKD</p>
+      `,
+      attachments: [
+        {
+          filename: 'rdv-cours-essai-jkd.ics',
+          content: icsContent,
+          contentType: 'text/calendar; method=REQUEST'
+        }
+      ]
+    };
+
+    // Send email
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email confirmation gratuite envoyée:', info.messageId, 'à', lead.email);
+
+    // Notification Admin
+    try {
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: process.env.SMTP_USER, // Envoi à l'admin
+        subject: `🆓 Nouvelle Inscription Gratuite : ${lead.first_name}`,
+        html: `<h1>Nouvelle Inscription (Gratuite)</h1>
+               <p><strong>Client :</strong> ${lead.first_name} (${lead.email})</p>
+               <p><strong>Téléphone :</strong> ${lead.phone}</p>
+               <p>A confirmé sa participation au cours d'essai.</p>`
+      });
+      console.log('Notification Admin envoyée (Gratuit)');
+    } catch (adminErr) {
+      console.error('Erreur notification admin (Gratuit):', adminErr);
+    }
+
+    res.json({ success: true, message: 'Inscription gratuite confirmée, email envoyé' });
+  } catch (error) {
+    console.error('Erreur confirm free:', error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
