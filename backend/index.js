@@ -1088,7 +1088,7 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`🌐 Frontend disponible: http://localhost:${PORT}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`🌐 Domaine: cercle-parisien.com`);
-  console.log(`⚠️  Supabase: ${supabase ? 'configuré' : 'non configuré'}`);
+  console.log(`⚠️  PocketBase: ${pb ? 'configuré' : 'non configuré'}`);
 });
 
 // ===============================
