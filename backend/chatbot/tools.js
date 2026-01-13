@@ -144,7 +144,7 @@ function createToolHandlers(deps) {
         // Préparer les données du lead
         const leadData = {
           first_name: first_name.trim(),
-          status: 'chatbot_lead'
+          status: 'new'  // Valeur valide PocketBase
         };
 
         if (email) {
@@ -237,7 +237,7 @@ function createToolHandlers(deps) {
             email: email.toLowerCase().trim(),
             first_name: first_name.trim(),
             phone: phone ? phone.trim() : undefined,
-            status: 'checkout_initiated',
+            status: 'new',  // Valeur valide PocketBase
             resumeToken: generateResumeToken()
           });
           if (data) leadId = data.id;
@@ -253,13 +253,17 @@ function createToolHandlers(deps) {
           success_url: `${frontendUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: `${frontendUrl}/cancel`,
           customer_email: email.toLowerCase().trim(),
-          client_reference_id: leadId,
           metadata: {
             first_name,
             phone: phone || '',
             source: 'chatbot'
           }
         };
+
+        // Ajouter client_reference_id SEULEMENT si on a un leadId valide
+        if (leadId) {
+          sessionConfig.client_reference_id = leadId;
+        }
 
         const session = await stripe.checkout.sessions.create(sessionConfig);
 
@@ -429,7 +433,7 @@ function createToolHandlers(deps) {
           await upsertLead({
             email: email.toLowerCase().trim(),
             first_name: first_name.trim(),
-            status: 'email_sent'
+            status: 'new'  // Valeur valide PocketBase
           });
         }
 
