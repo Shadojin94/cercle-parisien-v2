@@ -129,7 +129,7 @@ app.use(cors({
 app.options('*', cors());
 
 // Serve static files from public directory
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Route pour les webhooks Stripe (DOIT être avant express.json)
 app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
