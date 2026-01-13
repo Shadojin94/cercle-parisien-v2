@@ -265,7 +265,7 @@ app.get('/api/debug-email', async (req, res) => {
     if (testRecipient) {
       try {
         const info = await transporter.sendMail({
-          from: process.env.SMTP_USER,
+          from: process.env.SMTP_FROM || process.env.SMTP_USER,
           to: testRecipient,
           subject: 'Test Email - Cercle Parisien JKD',
           text: 'Si vous recevez ceci, la configuration email fonctionne sur Coolify !',
@@ -580,7 +580,7 @@ async function handleStripeWebhook(req, res) {
 
               // Préparer l'email de confirmation
               const mailOptions = {
-                from: process.env.SMTP_USER,
+                from: process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: lead.email,
                 subject: 'Confirmation d\'inscription - Cercle Parisien JKD',
                 html: `
@@ -642,7 +642,7 @@ async function handleStripeWebhook(req, res) {
 
               // Préparer l'email de relance
               const mailOptions = {
-                from: process.env.SMTP_USER,
+                from: process.env.SMTP_FROM || process.env.SMTP_USER,
                 to: lead.email,
                 subject: 'Reprenez votre inscription - Cercle Parisien JKD',
                 html: `
