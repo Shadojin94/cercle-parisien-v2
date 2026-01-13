@@ -111,11 +111,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://rsms.me", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://rsms.me", "https://fonts.gstatic.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
-      imgSrc: ["'self'", "data:", "https://picsum.photos", "https://i.imgur.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
       frameSrc: ["'self'", "https://www.youtube.com", "https://js.stripe.com"],
-      connectSrc: ["'self'", "https://api.stripe.com"]
+      connectSrc: ["'self'", "https://api.stripe.com", process.env.POCKETBASE_URL || "https://pb.cercle-parisien.com"]
     }
   }
 }));
