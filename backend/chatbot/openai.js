@@ -70,9 +70,14 @@ async function chatWithMartin(messages) {
 
         return completion.choices[0].message.content;
     } catch (error) {
-        console.error('Erreur OpenAI:', error);
+        console.error('❌ Erreur OpenAI:', error.message);
+        if (error.response) {
+            console.error('Status:', error.response.status);
+            console.error('Data:', error.response.data);
+        }
+        console.error('Modèle utilisé:', MODEL_NAME);
         // Fallback gracieux
-        return "Désolé, je subis une petite interférence spirituelle... Revenez dans un instant pour parler Jeet Kune Do ! 🥋";
+        return "Désolé, je subis une petite interférence spirituelle... (Erreur: " + (error.message || 'Inconnue') + ")";
     }
 }
 
