@@ -2,14 +2,20 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy backend files
+# Copy backend package files
 COPY backend/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
-# Copy application code
+# Copy backend application code
 COPY backend/ .
+
+# Copy frontend files to public directory
+COPY index.html ./public/
+COPY assets/ ./public/assets/
+COPY .htaccess ./public/ 2>/dev/null || true
+COPY vite.svg ./public/ 2>/dev/null || true
 
 # Expose port
 EXPOSE 3003
