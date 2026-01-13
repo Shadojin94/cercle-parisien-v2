@@ -236,6 +236,58 @@ app.get('/api/debug-stripe', async (req, res) => {
 });
 
 /**
+ * GET /api/debug-email
+ * Route de diagnostic pour tester la configuration Email (SMTP)
+ */
+app.get('/api/debug-email', async (req, res) => {
+  const results = {
+    checks: [],
+    env: {
+      SMTP_HOST: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+      SMTP_PORT: process.env.SMTP_PORT || '465 (default)',
+      SMTP_USER: process.env.SMTP_USER ? 'CONFIGURED' : 'MISSING',
+      SMTP_PASS: process.env.SMTP_PASS ? '*******' : 'MISSING'
+    }
+  };
+
+  try {
+    // 1. Vérification de la configuration connection
+    try {
+      await transporter.verify();
+      results.checks.push({ name: 'SMTP Connection', status: 'OK', detail: 'Ready to send messages' });
+    } catch (e) {
+      results.checks.push({ name: 'SMTP Connection', status: 'ERROR', detail: e.message });
+      throw new Error('Connexion SMTP impossible: ' + e.message);
+    }
+
+    // 2. Envoi d'un email de test (si param ?to=email fourni, sinon au SMTP_USER)
+    const testRecipient = req.query.to || process.env.SMTP_USER;
+    if (testRecipient) {
+      try {
+        const info = await transporter.sendMail({
+          from: process.env.SMTP_USER,
+          to: testRecipient,
+          subject: 'Test Email - Cercle Parisien JKD',
+          text: 'Si vous recevez ceci, la configuration email fonctionne sur Coolify !',
+          html: '<h1>Configuration Email OK</h1><p>Le serveur peut envoyer des emails.</p>'
+        });
+        results.checks.push({ name: `Send Email to ${testRecipient}`, status: 'OK', detail: `Message ID: ${info.messageId}` });
+      } catch (e) {
+        results.checks.push({ name: `Send Email to ${testRecipient}`, status: 'ERROR', detail: e.message });
+      }
+    } else {
+      results.checks.push({ name: 'Send Email', status: 'SKIPPED', detail: 'No recipient (SMTP_USER not set and no ?to= param)' });
+    }
+
+    res.json(results);
+
+  } catch (globalError) {
+    results.globalError = globalError.message;
+    res.status(500).json(results);
+  }
+});
+
+/**
  * POST /api/checkout-3mo
  * Crée une session de paiement Stripe pour abonnement 3 mois avec annulation automatique
  * Note: On crée d'abord la session, puis on modifie la subscription après création
