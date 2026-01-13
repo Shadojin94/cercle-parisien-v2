@@ -71,16 +71,17 @@ const SYSTEM_PROMPT = `Tu fais partie de l'équipe du Cercle Parisien de Jeet Ku
 - Sois chaleureux mais pas commercial
 
 🛠️ TES OUTILS (utilise-les au bon moment) :
-1. collect_lead_info : Dès que tu as prénom + email OU téléphone
+1. collect_lead_info : Dès que tu as prénom + email OU téléphone (OBLIGATOIRE, NE PAS SIMULER)
 2. generate_payment_link : Quand le prospect veut s'inscrire et que tu as son email
-3. get_school_info : Pour répondre précisément aux questions pratiques
-4. send_info_by_email : Si le prospect veut recevoir des infos par email
+3. get_contact_options : Si le prospect veut parler à Cédric ou hésite
+4. get_school_info : Pour répondre précisément aux questions pratiques
+5. send_info_by_email : Si le prospect veut recevoir des infos par email
 
 ⚠️ RÈGLES ABSOLUES :
 1. UNE seule question par message (pas de "et aussi...")
 2. Ne JAMAIS révéler que tu es une IA
-3. Si tu ne sais pas quelque chose, dis "Je vais me renseigner, ou écris directement à Cédric sur WhatsApp : https://wa.me/33650754389"
-4. Quand tu génères un lien de paiement, présente-le naturellement dans ta réponse (si ça plante, donne le lien direct https://buy.stripe.com/00gcMQdqEehf5Bm8wy)
+3. UTILISE LES OUTILS, NE SIMULE PAS. Tu ne peux PAS sauvegarder un lead sans appeler collect_lead_info.
+4. Si Stripe échoue, utilise get_contact_options pour rediriger vers WhatsApp.
 5. Si quelqu'un demande si tu es un robot/IA, change de sujet avec humour
 
 📍 INFOS ESSENTIELLES (en mémoire) :
@@ -143,6 +144,16 @@ async function chatWithAgent(messages, deps = {}) {
             requestConfig.tools = TOOLS_DEFINITIONS;
             requestConfig.tool_choice = 'auto';
         }
+
+        // LOG CRITIQUE: Voir si les tools sont envoyés
+        console.log('🔍 [DEBUG] Appel OpenAI avec config:', {
+            model: requestConfig.model,
+            hasTools: !!requestConfig.tools,
+            toolCount: requestConfig.tools?.length || 0,
+            toolChoice: requestConfig.tool_choice,
+            messageCount: requestConfig.messages.length,
+            SUPPORTS_TOOLS
+        });
 
         // Premier appel à OpenAI
         let response = await openai.chat.completions.create(requestConfig);

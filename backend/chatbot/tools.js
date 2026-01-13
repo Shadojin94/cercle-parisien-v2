@@ -297,29 +297,14 @@ function createToolHandlers(deps) {
       } catch (err) {
         console.error('❌ Erreur generate_payment_link:', err);
 
-        // FALLBACK: Liens statiques si l'API échoue
-        const staticLinks = {
-          'essai': 'https://buy.stripe.com/00gcMQdqEehf5Bm8wy', // Lien vérifié
-          'annuel': 'https://buy.stripe.com/5kA02k0IcgprcPCcMQ', // Exemple (à vérifier)
-          'trimestriel': 'https://buy.stripe.com/T1J2asfyUbdbdTGeUW' // Exemple
-        };
-
-        const fallbackUrl = staticLinks[plan_type];
-
-        if (fallbackUrl) {
-          console.log(`⚠️ Utilisation du lien statique fallback pour ${plan_type}`);
-          return {
-            success: true,
-            url: fallbackUrl,
-            plan_name: plan_type,
-            price: (plan_type === 'essai' ? 35 : 0),
-            message: `Petit souci technique avec la génération auto, mais voici le lien direct pour régler : ${fallbackUrl}`
-          };
-        }
-
+        // FALLBACK CRITIQUE: Les liens statiques Stripe sont MORTS
+        // On redirige vers WhatsApp pour ne pas perdre le lead
+        console.log('⚠️ Fallback WhatsApp car Stripe a échoué');
         return {
           success: false,
-          message: "Erreur technique. Tu peux payer directement sur place ou demander le lien à Cédric (06 50 75 43 89)."
+          action_type: 'whatsapp_link',
+          url: 'https://wa.me/33650754389?text=Bonjour%2C%20je%20veux%20r%C3%A9server%20le%20cours%20d%27essai%20%C3%A0%2035%E2%82%AC',
+          message: "Petit souci technique avec le paiement en ligne. Contacte Cédric sur WhatsApp pour finaliser ta réservation, il te répondra très vite !"
         };
       }
     },
