@@ -1,321 +1,512 @@
 /**
- * Chatbot Martin Li - Frontend Widget
- * Gère l'affichage et la communication avec le backend
+ * Chatbot Martin - Frontend Widget (Refonte UX/UI CPJKD 2026)
+ * Design: Rouge/Noir/Blanc, Animations GSAP, Responsive Mobile First
  */
 
 (function () {
-    // Configuration
-    const API_URL = '/api/chat';
-    const CHAT_TITLE = "Martin Li - Assistant JKD";
-    const WELCOME_MESSAGE = "Bonjour ! Je suis Martin, l'assistant du Cercle. Tu cherches des infos sur les cours ou tu veux t'inscrire ?";
+  // Configuration
+  const API_URL = '/api/chat';
+  const CHAT_TITLE = "Martin - Assistant JKD";
+  const BRAND_RED = "#c8102e";
+  const BRAND_BLACK = "#111111";
+  const WELCOME_MESSAGE = "Salut ! Moi c'est Martin. Tu veux tester un cours ou tu as une question ?";
 
-    // Styles injectés dynamiquement
-    const styles = `
-      #mart-chat-widget {
+  // Charger GSAP dynamiquement
+  const scriptGsap = document.createElement('script');
+  scriptGsap.src = "https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js";
+  document.head.appendChild(scriptGsap);
+
+  // Styles injectés (Design System CPJKD)
+  const styles = `
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+
+      #mart-widget {
         position: fixed;
-        bottom: 20px;
-        right: 20px;
-        z-index: 9999;
+        bottom: 24px;
+        right: 24px;
+        z-index: 10000;
         font-family: 'Inter', sans-serif;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
       }
-      
-      #mart-chat-toggle {
-        width: 60px;
-        height: 60px;
+
+      /* Bouton Flottant (Pulse Animation) */
+      #mart-toggle {
+        width: 64px;
+        height: 64px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-        box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+        background: ${BRAND_RED};
+        box-shadow: 0 4px 20px rgba(200, 16, 46, 0.4);
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: transform 0.3s ease;
+        transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
         border: none;
+        outline: none;
+        position: relative;
+        z-index: 20;
       }
-      
-      #mart-chat-toggle:hover {
-        transform: scale(1.05);
+
+      #mart-toggle:hover {
+        transform: scale(1.1) rotate(5deg);
       }
-      
-      #mart-chat-toggle svg {
+
+      #mart-toggle svg {
         width: 32px;
         height: 32px;
         color: white;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
       }
-  
-      #mart-chat-window {
+
+      /* Indicateur de notif */
+      .mart-badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 16px;
+        height: 16px;
+        background: white;
+        border: 2px solid ${BRAND_RED};
+        border-radius: 50%;
+        opacity: 0;
+      }
+
+      /* Fenêtre de Chat */
+      #mart-window {
         position: absolute;
         bottom: 80px;
         right: 0;
-        width: 350px;
-        height: 500px;
+        width: 380px;
+        height: 600px;
+        max-height: 80vh;
         background: white;
-        border-radius: 12px;
-        box-shadow: 0 8px 30px rgba(0,0,0,0.2);
+        border-radius: 20px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.15);
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        transform-origin: bottom right;
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
-        pointer-events: none;
-        transition: all 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        visibility: hidden;
+        border: 1px solid rgba(0,0,0,0.05);
       }
-  
-      #mart-chat-window.open {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: all;
-      }
-  
+
+      /* Header */
       .mart-header {
-        background: #1e3a8a;
+        background: ${BRAND_BLACK};
         color: white;
-        padding: 16px;
+        padding: 20px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        border-bottom: 3px solid ${BRAND_RED};
       }
-  
-      .mart-header h3 {
+
+      .mart-profile {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .mart-avatar {
+        width: 40px;
+        height: 40px;
+        background: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        border: 2px solid ${BRAND_RED};
+      }
+
+      .mart-info h3 {
         margin: 0;
         font-size: 16px;
         font-weight: 600;
+        letter-spacing: -0.02em;
       }
       
-      .mart-close {
-        background: none;
-        border: none;
-        color: white;
-        cursor: pointer;
-        font-size: 20px;
-      }
-  
-      .mart-messages {
-        flex: 1;
-        padding: 16px;
-        overflow-y: auto;
-        background: #f9fafb;
+      .mart-info span {
+        font-size: 12px;
+        opacity: 0.8;
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        align-items: center;
+        gap: 4px;
       }
-  
-      .mart-msg {
-        max-width: 80%;
-        padding: 10px 14px;
-        border-radius: 12px;
-        font-size: 14px;
-        line-height: 1.5;
-        position: relative;
-        word-wrap: break-word;
-      }
-  
-      .mart-msg.bot {
-        background: white;
-        color: #1f2937;
-        align-self: flex-start;
-        border-bottom-left-radius: 2px;
-        border: 1px solid #e5e7eb;
-      }
-  
-      .mart-msg.user {
-        background: #3b82f6;
-        color: white;
-        align-self: flex-end;
-        border-bottom-right-radius: 2px;
-      }
-  
-      .mart-input-area {
-        padding: 12px;
-        background: white;
-        border-top: 1px solid #e5e7eb;
-        display: flex;
-        gap: 8px;
-      }
-  
-      #mart-input {
-        flex: 1;
-        border: 1px solid #e5e7eb;
-        border-radius: 20px;
-        padding: 8px 16px;
-        font-size: 14px;
-        background: #f9fafb;
-        outline: none;
-      }
-      
-      #mart-input:focus {
-        border-color: #3b82f6;
-        background: white;
-      }
-  
-      #mart-send {
-        background: #3b82f6;
-        color: white;
-        border: none;
+
+      .mart-info span::before {
+        content: '';
+        display: block;
+        width: 6px;
+        height: 6px;
+        background: #10b981;
         border-radius: 50%;
-        width: 36px;
-        height: 36px;
+      }
+
+      .mart-close-btn {
+        background: rgba(255,255,255,0.1);
+        border: none;
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
+        transition: background 0.2s;
       }
-  
-      #mart-send:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
+
+      .mart-close-btn:hover {
+        background: rgba(255,255,255,0.2);
+      }
+
+      /* Zone Messages */
+      .mart-body {
+        flex: 1;
+        padding: 20px;
+        overflow-y: auto;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        scroll-behavior: smooth;
+      }
+
+      .mart-msg {
+        max-width: 85%;
+        padding: 14px 18px;
+        font-size: 15px;
+        line-height: 1.5;
+        position: relative;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+      }
+
+      .mart-msg.bot {
+        background: white;
+        color: #1f2937;
+        border-radius: 18px 18px 18px 4px;
+        align-self: flex-start;
+        border: 1px solid #e5e7eb;
+      }
+
+      .mart-msg.user {
+        background: ${BRAND_RED};
+        color: white;
+        border-radius: 18px 18px 4px 18px;
+        align-self: flex-end;
+        box-shadow: 0 4px 15px rgba(200, 16, 46, 0.2);
+      }
+
+      .mart-msg a {
+        color: inherit;
+        text-decoration: underline;
+        font-weight: 600;
+      }
+
+      /* Typing Indicator */
+      .mart-typing {
+        display: flex;
+        gap: 4px;
+        padding: 12px 16px;
+        background: white;
+        border-radius: 18px;
+        align-self: flex-start;
+        width: fit-content;
+        border: 1px solid #e5e7eb;
+        opacity: 0;
+        display: none;
       }
       
-      .mart-typing {
-        font-size: 12px;
-        color: #6b7280;
-        padding-left: 10px;
-        opacity: 0;
-        transition: opacity 0.2s;
-        height: 15px;
+      .mart-dot {
+        width: 8px;
+        height: 8px;
+        background: #9ca3af;
+        border-radius: 50%;
+        animation: martBounce 1.4s infinite ease-in-out both;
       }
-  
-      .mart-typing.visible {
-        opacity: 1;
+      
+      .mart-dot:nth-child(1) { animation-delay: -0.32s; }
+      .mart-dot:nth-child(2) { animation-delay: -0.16s; }
+      
+      @keyframes martBounce {
+        0%, 80%, 100% { transform: scale(0); }
+        40% { transform: scale(1); }
       }
-  
-      /* Mobile fast fix */
+
+      /* Input Zone */
+      .mart-footer {
+        padding: 16px;
+        background: white;
+        border-top: 1px solid #f0f0f0;
+      }
+
+      .mart-input-wrapper {
+        display: flex;
+        gap: 10px;
+        background: #f3f4f6;
+        padding: 8px;
+        border-radius: 30px;
+        border: 1px solid transparent;
+        transition: all 0.2s;
+      }
+
+      .mart-input-wrapper:focus-within {
+        background: white;
+        border-color: ${BRAND_RED};
+        box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+      }
+
+      #mart-input {
+        flex: 1;
+        border: none;
+        background: transparent;
+        padding: 8px 12px;
+        font-size: 15px;
+        outline: none;
+        color: #1f2937;
+      }
+
+      #mart-send {
+        background: ${BRAND_RED};
+        color: white;
+        border: none;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s;
+      }
+
+      #mart-send:disabled {
+        background: #e5e7eb;
+        cursor: not-allowed;
+      }
+
+      #mart-send:hover:not(:disabled) {
+        transform: scale(1.05);
+        box-shadow: 0 2px 10px rgba(200, 16, 46, 0.3);
+      }
+
+      /* Mobile Responsive */
       @media (max-width: 480px) {
-        #mart-chat-window {
-          bottom: 0px;
-          right: 0px;
+        #mart-window {
+          position: fixed;
+          bottom: 0;
+          right: 0;
           width: 100%;
-          height: 80%; /* Almost full screen but leaving top space */
-          border-radius: 12px 12px 0 0;
+          height: 100%;
+          max-height: 100%;
+          border-radius: 0;
+          z-index: 10001; /* Above toggle */
+        }
+        
+        #mart-widget {
+          bottom: 20px; 
+          right: 20px;
+        }
+
+        .mart-msg {
+          max-width: 90%;
         }
       }
     `;
 
-    // Injection CSS
-    const styleSheet = document.createElement("style");
-    styleSheet.innerText = styles;
-    document.head.appendChild(styleSheet);
+  // Injection CSS
+  const styleSheet = document.createElement("style");
+  styleSheet.innerText = styles;
+  document.head.appendChild(styleSheet);
 
-    // HTML Structure
-    const widgetHTML = `
-      <div id="mart-chat-widget">
-        <button id="mart-chat-toggle" aria-label="Ouvrir le chat">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-          </svg>
-        </button>
-        
-        <div id="mart-chat-window">
+
+  // HTML Structure
+  const widgetHTML = `
+      <div id="mart-widget">
+        <!-- Fenêtre -->
+        <div id="mart-window">
           <div class="mart-header">
-            <h3>${CHAT_TITLE}</h3>
-            <button class="mart-close">×</button>
-          </div>
-          <div class="mart-messages" id="mart-messages">
-            <!-- Messages go here -->
-          </div>
-          <div class="mart-typing" id="mart-typing">Martin écrit...</div>
-          <form class="mart-input-area" id="mart-form">
-            <input type="text" id="mart-input" placeholder="Posez votre question..." autocomplete="off" />
-            <button type="submit" id="mart-send">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="16" height="16">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            <div class="mart-profile">
+              <div class="mart-avatar">🥋</div>
+              <div class="mart-info">
+                <h3>${CHAT_TITLE}</h3>
+                <span>En ligne</span>
+              </div>
+            </div>
+            <button class="mart-close-btn" aria-label="Fermer">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" width="20">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+
+          <div class="mart-body" id="mart-body">
+            <!-- Messages -->
+            <div class="mart-typing" id="mart-typing">
+              <div class="mart-dot"></div>
+              <div class="mart-dot"></div>
+              <div class="mart-dot"></div>
+            </div>
+          </div>
+
+          <form class="mart-footer" id="mart-form">
+            <div class="mart-input-wrapper">
+              <input type="text" id="mart-input" placeholder="Écrivez votre message..." autocomplete="off" />
+              <button type="submit" id="mart-send">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20">
+                  <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+            </div>
           </form>
         </div>
+
+        <!-- Bouton Toggle -->
+        <button id="mart-toggle" aria-label="Ouvrir le chat">
+          <div class="mart-badge"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+        </button>
       </div>
     `;
 
-    document.body.insertAdjacentHTML('beforeend', widgetHTML);
+  document.body.insertAdjacentHTML('beforeend', widgetHTML);
 
-    // Logic
-    const toggleBtn = document.getElementById('mart-chat-toggle');
-    const closeBtn = document.querySelector('.mart-close');
-    const chatWindow = document.getElementById('mart-chat-window');
-    const messagesDiv = document.getElementById('mart-messages');
-    const chatForm = document.getElementById('mart-form');
-    const inputField = document.getElementById('mart-input');
-    const sendBtn = document.getElementById('mart-send');
-    const typingIndicator = document.getElementById('mart-typing');
+  // Elements
+  const toggleBtn = document.getElementById('mart-toggle');
+  const closeBtn = document.querySelector('.mart-close-btn');
+  const windowEl = document.getElementById('mart-window');
+  const messagesBody = document.getElementById('mart-body');
+  const form = document.getElementById('mart-form');
+  const input = document.getElementById('mart-input');
+  const sendBtn = document.getElementById('mart-send');
+  const typingIndicator = document.getElementById('mart-typing');
 
-    let history = []; // Historique de session local
+  let isOpen = false;
+  let history = [];
 
-    // Init User ID if needed (for backend to track sessions? later)
+  // GSAP Helper (Wait for script load)
+  const animate = (cb) => {
+    if (window.gsap) cb();
+    else setTimeout(() => animate(cb), 100);
+  };
 
-    // Toggle Window
-    function toggleChat() {
-        chatWindow.classList.toggle('open');
-        if (chatWindow.classList.contains('open')) {
-            inputField.focus();
-            if (history.length === 0) {
-                addMessage('bot', WELCOME_MESSAGE);
-                history.push({ role: 'assistant', content: WELCOME_MESSAGE });
-            }
+  // Toggle Logic
+  const toggleChat = () => {
+    isOpen = !isOpen;
+
+    animate(() => {
+      if (isOpen) {
+        // Open Animation
+        gsap.to(windowEl, {
+          autoAlpha: 1,
+          scale: 1,
+          duration: 0.4,
+          ease: "back.out(1.2)"
+        });
+        gsap.to(toggleBtn, { scale: 0, duration: 0.2 });
+        input.focus();
+
+        // Welcome msg if empty
+        if (history.length === 0) {
+          setTimeout(() => addMessage('bot', WELCOME_MESSAGE), 300);
+          history.push({ role: 'assistant', content: WELCOME_MESSAGE });
         }
-    }
-
-    toggleBtn.addEventListener('click', toggleChat);
-    closeBtn.addEventListener('click', () => chatWindow.classList.remove('open'));
-
-    // Add Message to UI
-    function addMessage(sender, text) {
-        const msgDiv = document.createElement('div');
-        msgDiv.classList.add('mart-msg', sender);
-
-        // Basic secure rendering to avoid XSS but allow links
-        // Simple parse for http links to <a> tags
-        const linkified = text.replace(
-            /(https?:\/\/[^\s]+)/g,
-            '<a href="$1" target="_blank" style="color:inherit;text-decoration:underline;">$1</a>'
-        );
-
-        msgDiv.innerHTML = linkified; // Be careful, simplistic.
-        messagesDiv.appendChild(msgDiv);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
-
-    // Handle Submit
-    chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const text = inputField.value.trim();
-        if (!text) return;
-
-        // UI User
-        addMessage('user', text);
-        inputField.value = '';
-        sendBtn.disabled = true;
-
-        // Local History update
-        history.push({ role: 'user', content: text });
-
-        // Call API
-        typingIndicator.classList.add('visible');
-
-        try {
-            const res = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: history })
-            });
-
-            const data = await res.json();
-
-            typingIndicator.classList.remove('visible');
-            sendBtn.disabled = false;
-
-            if (data.reply) {
-                addMessage('bot', data.reply);
-                history.push({ role: 'assistant', content: data.reply });
-            } else {
-                addMessage('bot', "Oups, je n'ai pas compris. Peux-tu reformuler ?");
-            }
-
-        } catch (err) {
-            console.error(err);
-            typingIndicator.classList.remove('visible');
-            sendBtn.disabled = false;
-            addMessage('bot', "Désolé, j'ai un petit souci de connexion. Réessaie !");
-        }
+      } else {
+        // Close Animation
+        gsap.to(windowEl, {
+          autoAlpha: 0,
+          scale: 0.8,
+          duration: 0.3,
+          ease: "power2.in"
+        });
+        gsap.to(toggleBtn, { scale: 1, duration: 0.3, delay: 0.1 });
+      }
     });
+  };
+
+  toggleBtn.addEventListener('click', toggleChat);
+  closeBtn.addEventListener('click', toggleChat);
+
+  // Add Message
+  const addMessage = (role, text) => {
+    const div = document.createElement('div');
+    div.className = `mart-msg ${role}`;
+
+    // Link detection
+    const linkified = text.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank">$1</a>'
+    );
+    div.innerHTML = linkified;
+
+    messagesBody.insertBefore(div, typingIndicator);
+    messagesBody.scrollTop = messagesBody.scrollHeight;
+
+    // Message Animation
+    animate(() => {
+      gsap.fromTo(div,
+        { opacity: 0, y: 10, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.3, ease: "power2.out" }
+      );
+    });
+  };
+
+  // Typing Logic
+  const showTyping = (show) => {
+    typingIndicator.style.display = show ? 'flex' : 'none';
+    if (show) {
+      typingIndicator.style.opacity = 0;
+      animate(() => gsap.to(typingIndicator, { opacity: 1, duration: 0.2 }));
+      messagesBody.scrollTop = messagesBody.scrollHeight;
+    }
+  };
+
+  // Submit Logic
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = input.value.trim();
+    if (!text) return;
+
+    // User Msg
+    addMessage('user', text);
+    input.value = '';
+    history.push({ role: 'user', content: text });
+
+    // API Call
+    showTyping(true);
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history })
+      });
+      const data = await res.json();
+
+      showTyping(false);
+      sendBtn.disabled = false;
+
+      if (data.reply) {
+        addMessage('bot', data.reply);
+        history.push({ role: 'assistant', content: data.reply });
+      } else {
+        addMessage('bot', "Je n'ai pas compris, peux-tu répéter ?");
+      }
+    } catch (err) {
+      console.error(err);
+      showTyping(false);
+      sendBtn.disabled = false;
+      addMessage('bot', "Erreur de connexion 🔴");
+    }
+  });
 
 })();
