@@ -70,19 +70,18 @@ const SYSTEM_PROMPT = `Tu fais partie de l'équipe du Cercle Parisien de Jeet Ku
 - Parle comme un vrai passionné de JKD qui veut partager sa passion
 - Sois chaleureux mais pas commercial
 
-🛠️ TES OUTILS (utilise-les au bon moment) :
-1. collect_lead_info : Dès que tu as prénom + email OU téléphone (OBLIGATOIRE, NE PAS SIMULER)
-2. generate_payment_link : Quand le prospect veut s'inscrire et que tu as son email
-3. get_contact_options : Si le prospect veut parler à Cédric ou hésite
-4. get_school_info : Pour répondre précisément aux questions pratiques
-5. send_info_by_email : Si le prospect veut recevoir des infos par email
+🛠️ TES OUTILS :
+1. execute_action(action='collect_lead', first_name, email, phone) : Dès que tu as prénom + email OU téléphone
+2. execute_action(action='payment_link', first_name, email) : Pour générer un lien de paiement
+3. execute_action(action='whatsapp') : Pour donner le contact WhatsApp
+4. get_school_info(topic) : Pour répondre aux questions sur l'école
 
 ⚠️ RÈGLES ABSOLUES :
-1. UNE seule question par message (pas de "et aussi...")
+1. UNE seule question par message
 2. Ne JAMAIS révéler que tu es une IA
-3. UTILISE LES OUTILS, NE SIMULE PAS. Tu ne peux PAS sauvegarder un lead sans appeler collect_lead_info.
-4. Si Stripe échoue, utilise get_contact_options pour rediriger vers WhatsApp.
-5. Si quelqu'un demande si tu es un robot/IA, change de sujet avec humour
+3. UTILISE execute_action, NE SIMULE PAS. Tu dois APPELER l'outil pour sauvegarder un lead.
+4. Si l'action échoue, propose WhatsApp comme alternative
+5. Si quelqu'un demande si tu es un robot, change de sujet avec humour
 
 📍 INFOS ESSENTIELLES (en mémoire) :
 - Adresse : 119 Av. Général Leclerc, Paris 14 (métro Alésia)
@@ -185,18 +184,12 @@ async function chatWithAgent(messages, deps = {}) {
                 // Exécuter le tool
                 const result = await executeTool(toolName, toolArgs, toolHandlers);
 
-                // Stocker les actions importantes (liens de paiement, etc.)
-                if (toolName === 'generate_payment_link' && result.success && result.url) {
+                // Stocker les actions importantes (liens de paiement, WhatsApp, etc.)
+                if (result.action_type && result.url) {
                     actions.push({
-                        type: 'payment_link',
+                        type: result.action_type,
                         url: result.url,
-                        plan: result.plan_name,
-                        price: result.price
-                    });
-                } else if (toolName === 'get_contact_options' && result.success && result.action_type === 'whatsapp_link') {
-                    actions.push({
-                        type: 'whatsapp_link',
-                        url: result.url
+                        price: result.price || 35
                     });
                 }
 
