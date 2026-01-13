@@ -65,7 +65,8 @@ async function chatWithMartin(messages) {
             model: MODEL_NAME,
             messages: conversation,
             // temperature removed - model only supports default (1)
-            max_completion_tokens: 300,  // Réponses concises (Nouvelle syntaxe)
+            // Reasoning models need more tokens (reasoning + output)
+            max_completion_tokens: 1500,
         });
 
         // Debug: Log the full response structure
