@@ -113,6 +113,19 @@ const TOOLS_DEFINITIONS = [
       }
     }
   }
+  },
+{
+  type: "function",
+    function: {
+      name: "get_contact_options",
+      description: "Retourne les options de contact rapides (WhatsApp). Utilise cette fonction si le prospect veut parler à un humain (Cédric) ou hésite.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
+  }
 ];
 
 // ============================================
@@ -125,6 +138,14 @@ const TOOLS_DEFINITIONS = [
  */
 function createToolHandlers(deps) {
   const { pb, stripe, transporter, upsertLead, generateResumeToken } = deps;
+
+  // LOG CRITIQUE: Vérifier les dépendances au démarrage
+  console.log('🔧 [TOOLS] Initialisation handlers avec deps:', {
+    hasPb: !!pb,
+    hasStripe: !!stripe,
+    hasTransporter: !!transporter,
+    hasUpsert: !!upsertLead
+  });
 
   return {
     /**
@@ -492,40 +513,53 @@ function createToolHandlers(deps) {
           message: "Erreur lors de l'envoi. Tu peux trouver toutes les infos sur www.cercle-parisien.com"
         };
       }
+    /**
+     * Retourne les options de contact (Action WhatsApp)
+     */
+    async get_contact_options() {
+        console.log('📞 Tool get_contact_options appelé');
+        return {
+          success: true,
+          // On ne retourne pas d'URL dans le message texte, mais l'action sera interceptée
+          // par le wrapper pour ajouter un bouton
+          action_type: 'whatsapp_link',
+          url: 'https://wa.me/33650754389',
+          message: "Tu peux discuter directement avec Cédric sur WhatsApp, c'est souvent le plus simple !"
+        };
+      }
+    };
+  }
+
+  /**
+   * Exécute un tool avec les arguments donnés
+   * @param {string} toolName - Nom du tool
+   * @param {Object} args - Arguments du tool
+   * @param {Object} handlers - Handlers créés avec createToolHandlers
+   */
+  async function executeTool(toolName, args, handlers) {
+    const handler = handlers[toolName];
+
+    if (!handler) {
+      console.error(`❌ Tool inconnu: ${toolName}`);
+      return {
+        success: false,
+        message: `Tool "${toolName}" non trouvé.`
+      };
     }
+
+    try {
+      return await handler(args);
+    } catch (err) {
+      console.error(`❌ Erreur exécution tool ${toolName}:`, err);
+      return {
+        success: false,
+        message: `Erreur lors de l'exécution de ${toolName}.`
+      };
+    }
+  }
+
+  module.exports = {
+    TOOLS_DEFINITIONS,
+    createToolHandlers,
+    executeTool
   };
-}
-
-/**
- * Exécute un tool avec les arguments donnés
- * @param {string} toolName - Nom du tool
- * @param {Object} args - Arguments du tool
- * @param {Object} handlers - Handlers créés avec createToolHandlers
- */
-async function executeTool(toolName, args, handlers) {
-  const handler = handlers[toolName];
-
-  if (!handler) {
-    console.error(`❌ Tool inconnu: ${toolName}`);
-    return {
-      success: false,
-      message: `Tool "${toolName}" non trouvé.`
-    };
-  }
-
-  try {
-    return await handler(args);
-  } catch (err) {
-    console.error(`❌ Erreur exécution tool ${toolName}:`, err);
-    return {
-      success: false,
-      message: `Erreur lors de l'exécution de ${toolName}.`
-    };
-  }
-}
-
-module.exports = {
-  TOOLS_DEFINITIONS,
-  createToolHandlers,
-  executeTool
-};

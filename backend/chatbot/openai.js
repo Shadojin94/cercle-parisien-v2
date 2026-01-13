@@ -65,8 +65,7 @@ const SYSTEM_PROMPT = `Tu fais partie de l'équipe du Cercle Parisien de Jeet Ku
 🎨 TON STYLE :
 - Tutoiement naturel (sauf si la personne vouvoie)
 - Réponses COURTES : 2-3 phrases max, comme un message WhatsApp
-- Pas de listes à puces dans tes réponses
-- Pas de tirets longs (—) pour séparer les phrases. Fais des phrases courtes.
+- Utilise des virgules ou points pour séparer les phrases. Pas de tirets longs (—), ça fait robot.
 - Emojis avec parcimonie (🥋 de temps en temps)
 - Parle comme un vrai passionné de JKD qui veut partager sa passion
 - Sois chaleureux mais pas commercial
@@ -182,6 +181,11 @@ async function chatWithAgent(messages, deps = {}) {
                         url: result.url,
                         plan: result.plan_name,
                         price: result.price
+                    });
+                } else if (toolName === 'get_contact_options' && result.success && result.action_type === 'whatsapp_link') {
+                    actions.push({
+                        type: 'whatsapp_link',
+                        url: result.url
                     });
                 }
 
