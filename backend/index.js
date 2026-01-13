@@ -175,6 +175,69 @@ function generateICS(firstName, email) {
 // ===============================
 
 /**
+ * GET /api/debug-stripe
+ * Route de diagnostic pour tester la configuration Stripe
+ */
+app.get('/api/debug-stripe', async (req, res) => {
+  const results = {
+    checks: [],
+    env: {
+      STRIPE_SECRET_KEY_EXISTS: !!process.env.STRIPE_SECRET_KEY,
+      STRIPE_SECRET_KEY_PREFIX: process.env.STRIPE_SECRET_KEY ? process.env.STRIPE_SECRET_KEY.substring(0, 7) + '...' : 'NONE',
+      PORT: process.env.PORT,
+      FRONTEND_URL: process.env.FRONTEND_URL
+    }
+  };
+
+  try {
+    // 1. Test de connexion basique (Balance)
+    try {
+      const balance = await stripe.balance.retrieve();
+      results.checks.push({ name: 'Stripe Connection', status: 'OK', detail: 'Balance retrieved' });
+    } catch (e) {
+      results.checks.push({ name: 'Stripe Connection', status: 'ERROR', detail: e.message });
+      throw new Error('Connexion Stripe impossible: ' + e.message);
+    }
+
+    // 2. Vérification des Plans (Price IDs)
+    const priceIdsToCheck = [
+      'price_1S8fhXFvnccm1W1dXlCxUlbV', // Cours d'essai
+      'price_1SE5fLFvnccm1W1d6bghBCkt', // Annuel
+      'price_1S8fkYFvnccm1W1dI5RhgQlT'  // Trimestriel
+    ];
+
+    for (const id of priceIdsToCheck) {
+      try {
+        const price = await stripe.prices.retrieve(id);
+        results.checks.push({ name: `Price Check: ${id}`, status: 'OK', detail: `Found: ${price.active ? 'Active' : 'Archived'} (${price.unit_amount / 100} ${price.currency})` });
+      } catch (e) {
+        results.checks.push({ name: `Price Check: ${id}`, status: 'ERROR', detail: e.message });
+      }
+    }
+
+    // 3. Test de création de session (mode setup pour ne pas facturer)
+    try {
+      const session = await stripe.checkout.sessions.create({
+        mode: 'setup',
+        currency: 'eur',
+        customer_email: 'test-debug@cercle-parisien.com',
+        success_url: `${process.env.FRONTEND_URL || 'http://localhost:3003'}/success`,
+        cancel_url: `${process.env.FRONTEND_URL || 'http://localhost:3003'}/cancel`,
+      });
+      results.checks.push({ name: 'Checkout Session Create (Setup Mode)', status: 'OK', detail: `Session ID: ${session.id}` });
+    } catch (e) {
+      results.checks.push({ name: 'Checkout Session Create', status: 'ERROR', detail: e.message });
+    }
+
+    res.json(results);
+
+  } catch (globalError) {
+    results.globalError = globalError.message;
+    res.status(500).json(results);
+  }
+});
+
+/**
  * POST /api/checkout-3mo
  * Crée une session de paiement Stripe pour abonnement 3 mois avec annulation automatique
  * Note: On crée d'abord la session, puis on modifie la subscription après création
