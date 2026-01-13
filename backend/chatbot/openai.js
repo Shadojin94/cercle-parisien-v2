@@ -64,7 +64,7 @@ async function chatWithMartin(messages) {
         const completion = await openai.chat.completions.create({
             model: MODEL_NAME,
             messages: conversation,
-            temperature: 0.7, // Créatif mais précis
+            // temperature removed - model only supports default (1)
             max_completion_tokens: 300,  // Réponses concises (Nouvelle syntaxe)
         });
 
