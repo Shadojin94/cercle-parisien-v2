@@ -131,10 +131,8 @@ app.options('*', cors());
 // Serve static files from public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Catch-all pour SPA: renvoyer index.html pour les routes frontend
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Route pour les webhooks Stripe (DOIT être avant express.json)
+app.post('/api/webhooks/stripe', express.raw({ type: 'application/json' }), handleStripeWebhook);
 
 // Middleware pour parser le JSON et les données de formulaire
 app.use(express.json({ limit: '10mb' }));
@@ -1119,6 +1117,19 @@ app.get('/api/health', (req, res) => {
     domain: 'cercle-parisien.com',
     pocketbase: pb ? 'configured' : 'not configured'
   });
+});
+
+// ===============================
+// ROUTING FRONTEND (SPA)
+// ===============================
+
+// Catch-all pour SPA (doit être après toutes les routes API et avant la gestion d'erreur)
+app.get('*', (req, res, next) => {
+  // Si c'est une requête API, on passe au gestionnaire 404 JSON
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // ===============================
