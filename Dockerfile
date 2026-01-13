@@ -14,8 +14,6 @@ COPY backend/ .
 # Copy frontend files to public directory
 COPY index.html ./public/
 COPY assets/ ./public/assets/
-COPY .htaccess ./public/ 2>/dev/null || true
-COPY vite.svg ./public/ 2>/dev/null || true
 
 # Expose port
 EXPOSE 3003
