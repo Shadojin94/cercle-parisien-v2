@@ -68,7 +68,21 @@ async function chatWithMartin(messages) {
             max_completion_tokens: 300,  // Réponses concises (Nouvelle syntaxe)
         });
 
-        return completion.choices[0].message.content;
+        // Debug: Log the full response structure
+        console.log('🤖 OpenAI Response:', JSON.stringify(completion, null, 2));
+
+        // Try different response paths for reasoning models
+        const content = completion.choices[0]?.message?.content
+            || completion.choices[0]?.message?.reasoning_content
+            || completion.choices[0]?.text
+            || null;
+
+        if (!content) {
+            console.error('⚠️ Réponse vide de OpenAI. Structure:', completion.choices[0]);
+            return "Martin est en méditation... Réessayez dans un instant !";
+        }
+
+        return content;
     } catch (error) {
         console.error('❌ Erreur OpenAI:', error.message);
         if (error.response) {
