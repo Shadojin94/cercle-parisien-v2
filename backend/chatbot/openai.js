@@ -8,8 +8,8 @@ const { TOOLS_DEFINITIONS, createToolHandlers, executeTool } = require('./tools'
 
 // Configuration du client OpenAI
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
 });
 
 // Modèle à utiliser
@@ -26,7 +26,7 @@ const SUPPORTS_TOOLS = !LITE_MODE && !MODEL_NAME.includes('o1') && !MODEL_NAME.i
 console.log(`🤖 Agent Cercle Parisien initialisé avec le modèle : ${MODEL_NAME}`);
 console.log(`🔧 Function calling: ${SUPPORTS_TOOLS ? 'activé' : 'désactivé'}${LITE_MODE ? ' (mode lite)' : ''}`);
 if (!process.env.OPENAI_API_KEY) {
-  console.warn('⚠️ OPENAI_API_KEY non définie !');
+    console.warn('⚠️ OPENAI_API_KEY non définie !');
 }
 
 // ============================================
@@ -117,133 +117,138 @@ R: "Haha, non je suis bien réel ! Bon, qu'est-ce qui t'intéresse dans le JKD ?
  * @returns {Promise<Object>} - { reply: string, actions?: array }
  */
 async function chatWithAgent(messages, deps = {}) {
-  try {
-    // Créer les handlers de tools avec les dépendances
-    const toolHandlers = createToolHandlers(deps);
+    try {
+        // Créer les handlers de tools avec les dépendances
+        const toolHandlers = createToolHandlers(deps);
 
-    // Construire la conversation avec le system prompt
-    const conversation = [
-      { role: 'system', content: SYSTEM_PROMPT },
-      ...messages
-    ];
+        // Construire la conversation avec le system prompt
+        const conversation = [
+            { role: 'system', content: SYSTEM_PROMPT },
+            ...messages
+        ];
 
-    // Configuration de l'appel OpenAI
-    const requestConfig = {
-      model: MODEL_NAME,
-      messages: conversation,
-      temperature: 0.8,
-      max_tokens: 500,
-    };
+        // Configuration de l'appel OpenAI
+        const requestConfig = {
+            model: MODEL_NAME,
+            messages: conversation,
+            model: MODEL_NAME,
+            messages: conversation,
+            // temperature: 0.8, // Désactivé pour compatibilité modèles raisonnement (o1/gpt-5-mini)
+            max_completion_tokens: 2500, // Augmenté pour laisser la place au raisonnement
+        };
 
-    // Ajouter les tools seulement si le modèle les supporte
-    if (SUPPORTS_TOOLS) {
-      requestConfig.tools = TOOLS_DEFINITIONS;
-      requestConfig.tool_choice = 'auto';
-    }
-
-    // Premier appel à OpenAI
-    let response = await openai.chat.completions.create(requestConfig);
-
-    let assistantMessage = response.choices[0].message;
-    let actions = []; // Pour stocker les actions effectuées (liens de paiement, etc.)
-
-    // Boucle de traitement des tool calls (seulement si tools supportés)
-    let iterations = 0;
-    const maxIterations = 5; // Sécurité anti-boucle infinie
-
-    while (SUPPORTS_TOOLS && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0 && iterations < maxIterations) {
-      iterations++;
-      console.log(`🔧 Iteration ${iterations}: ${assistantMessage.tool_calls.length} tool(s) à exécuter`);
-
-      // Ajouter le message de l'assistant avec les tool_calls à la conversation
-      conversation.push(assistantMessage);
-
-      // Exécuter chaque tool call
-      for (const toolCall of assistantMessage.tool_calls) {
-        const toolName = toolCall.function.name;
-        const toolArgs = JSON.parse(toolCall.function.arguments);
-
-        console.log(`  → Exécution: ${toolName}`, toolArgs);
-
-        // Exécuter le tool
-        const result = await executeTool(toolName, toolArgs, toolHandlers);
-
-        // Stocker les actions importantes (liens de paiement, etc.)
-        if (toolName === 'generate_payment_link' && result.success && result.url) {
-          actions.push({
-            type: 'payment_link',
-            url: result.url,
-            plan: result.plan_name,
-            price: result.price
-          });
+        // Ajouter les tools seulement si le modèle les supporte
+        if (SUPPORTS_TOOLS) {
+            requestConfig.tools = TOOLS_DEFINITIONS;
+            requestConfig.tool_choice = 'auto';
         }
 
-        // Ajouter le résultat du tool à la conversation
-        conversation.push({
-          role: 'tool',
-          tool_call_id: toolCall.id,
-          content: JSON.stringify(result)
+        // Premier appel à OpenAI
+        let response = await openai.chat.completions.create(requestConfig);
+
+        // Debug Ultrathink: Voir le raisonnement
+        console.log('🧠 OpenAI Response (First):', JSON.stringify(response.choices[0], null, 2));
+
+        let assistantMessage = response.choices[0].message;
+        let actions = []; // Pour stocker les actions effectuées (liens de paiement, etc.)
+
+        // Boucle de traitement des tool calls (seulement si tools supportés)
+        let iterations = 0;
+        const maxIterations = 5; // Sécurité anti-boucle infinie
+
+        while (SUPPORTS_TOOLS && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0 && iterations < maxIterations) {
+            iterations++;
+            console.log(`🔧 Iteration ${iterations}: ${assistantMessage.tool_calls.length} tool(s) à exécuter`);
+
+            // Ajouter le message de l'assistant avec les tool_calls à la conversation
+            conversation.push(assistantMessage);
+
+            // Exécuter chaque tool call
+            for (const toolCall of assistantMessage.tool_calls) {
+                const toolName = toolCall.function.name;
+                const toolArgs = JSON.parse(toolCall.function.arguments);
+
+                console.log(`  → Exécution: ${toolName}`, toolArgs);
+
+                // Exécuter le tool
+                const result = await executeTool(toolName, toolArgs, toolHandlers);
+
+                // Stocker les actions importantes (liens de paiement, etc.)
+                if (toolName === 'generate_payment_link' && result.success && result.url) {
+                    actions.push({
+                        type: 'payment_link',
+                        url: result.url,
+                        plan: result.plan_name,
+                        price: result.price
+                    });
+                }
+
+                // Ajouter le résultat du tool à la conversation
+                conversation.push({
+                    role: 'tool',
+                    tool_call_id: toolCall.id,
+                    content: JSON.stringify(result)
+                });
+            }
+
+            // Rappeler OpenAI pour obtenir la réponse finale
+            const followUpConfig = {
+                model: MODEL_NAME,
+                messages: conversation,
+                // temperature: 0.8,
+                max_completion_tokens: 2500,
+            };
+            if (SUPPORTS_TOOLS) {
+                followUpConfig.tools = TOOLS_DEFINITIONS;
+                followUpConfig.tool_choice = 'auto';
+            }
+            response = await openai.chat.completions.create(followUpConfig);
+
+            assistantMessage = response.choices[0].message;
+        }
+
+        // Extraire la réponse textuelle
+        const content = assistantMessage.content;
+
+        if (!content) {
+            console.error('⚠️ Réponse vide de OpenAI');
+            return {
+                reply: "Hmm, j'ai eu un petit bug. Tu peux me répéter ta question ?",
+                actions: []
+            };
+        }
+
+        console.log(`✅ Réponse générée (${content.length} chars)`);
+
+        return {
+            reply: content,
+            actions
+        };
+
+    } catch (error) {
+        // Logging détaillé pour débugger
+        console.error('❌ Erreur OpenAI complète:', {
+            message: error.message,
+            status: error.status,
+            code: error.code,
+            type: error.type,
+            // Si c'est une erreur de l'API, afficher les détails
+            response: error.response?.data || error.error || null
         });
-      }
 
-      // Rappeler OpenAI pour obtenir la réponse finale
-      const followUpConfig = {
-        model: MODEL_NAME,
-        messages: conversation,
-        temperature: 0.8,
-        max_tokens: 500,
-      };
-      if (SUPPORTS_TOOLS) {
-        followUpConfig.tools = TOOLS_DEFINITIONS;
-        followUpConfig.tool_choice = 'auto';
-      }
-      response = await openai.chat.completions.create(followUpConfig);
+        // Message d'erreur naturel
+        const fallbackMessages = [
+            "Oups, petit souci technique de mon côté. Tu peux reformuler ?",
+            "Hmm, j'ai eu un bug. En attendant, tu peux appeler Cédric au 06 50 75 43 89 !",
+            "Désolé, problème de connexion. Tu voulais des infos sur quoi ?"
+        ];
 
-      assistantMessage = response.choices[0].message;
+        return {
+            reply: fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)],
+            actions: [],
+            error: error.message
+        };
     }
-
-    // Extraire la réponse textuelle
-    const content = assistantMessage.content;
-
-    if (!content) {
-      console.error('⚠️ Réponse vide de OpenAI');
-      return {
-        reply: "Hmm, j'ai eu un petit bug. Tu peux me répéter ta question ?",
-        actions: []
-      };
-    }
-
-    console.log(`✅ Réponse générée (${content.length} chars)`);
-
-    return {
-      reply: content,
-      actions
-    };
-
-  } catch (error) {
-    // Logging détaillé pour débugger
-    console.error('❌ Erreur OpenAI complète:', {
-      message: error.message,
-      status: error.status,
-      code: error.code,
-      type: error.type,
-      // Si c'est une erreur de l'API, afficher les détails
-      response: error.response?.data || error.error || null
-    });
-
-    // Message d'erreur naturel
-    const fallbackMessages = [
-      "Oups, petit souci technique de mon côté. Tu peux reformuler ?",
-      "Hmm, j'ai eu un bug. En attendant, tu peux appeler Cédric au 06 50 75 43 89 !",
-      "Désolé, problème de connexion. Tu voulais des infos sur quoi ?"
-    ];
-
-    return {
-      reply: fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)],
-      actions: [],
-      error: error.message
-    };
-  }
 }
 
 // ============================================
@@ -252,10 +257,10 @@ async function chatWithAgent(messages, deps = {}) {
 
 // Export de la nouvelle fonction
 module.exports = {
-  chatWithAgent,
-  // Alias pour compatibilité avec l'ancienne API
-  chatWithMartin: async (messages) => {
-    const result = await chatWithAgent(messages, {});
-    return result.reply;
-  }
+    chatWithAgent,
+    // Alias pour compatibilité avec l'ancienne API
+    chatWithMartin: async (messages) => {
+        const result = await chatWithAgent(messages, {});
+        return result.reply;
+    }
 };
