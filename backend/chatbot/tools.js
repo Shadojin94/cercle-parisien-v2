@@ -329,77 +329,91 @@ function createToolHandlers(deps) {
 
         switch (info_type) {
           case 'infos_pratiques':
-            subject = 'Infos pratiques - Cercle Parisien JKD';
-            textContent = `Salut ${first_name},
+            subject = 'Infos pratiques pour ton cours';
+            textContent = `Bonjour ${first_name},
 
-Voici les infos pour venir nous rejoindre :
+J'espère que tu vas bien.
 
-ADRESSE
-119 Avenue du General Leclerc, 75014 Paris
-Google Maps : https://maps.google.com/?q=119+Avenue+General+Leclerc+Paris
+Voici les infos pratiques pour venir nous rejoindre :
 
-ACCES
-Metro Alesia (ligne 4), sortie Avenue du General Leclerc
+Les cours ont lieu chaque samedi de 14h à 16h au Centre Alésia, situé au 119 Avenue du Général Leclerc, Paris 14e.
 
-HORAIRES
-Cours le samedi de 14h a 16h
-Arrive vers 13h45 pour te changer tranquillement.
+Pour y accéder, le plus simple est le métro Alésia (ligne 4), c'est à 2 minutes à pied.
 
-EQUIPEMENT
-Tenue de sport (jogging, t-shirt). Pieds nus ou chaussures de sport propres.
+Je te conseille d'arriver vers 13h45 pour te changer tranquillement. Côté tenue, viens avec un jogging et un t-shirt, pieds nus ou chaussures de sport propres.
 
-Des questions ? Appelle Cedric au 06 50 75 43 89
+N'hésite pas à m'appeler au 06 50 75 43 89 si tu as des questions.
 
-A samedi !
-Cedric - Cercle Parisien JKD`;
+Au plaisir de te retrouver samedi.
+
+Bien à toi,
+
+Cédric
+
+--
+Cédric ATTICOT DIT RAVINO
+cedric.atticot@live.fr
+06 50 75 43 89
+www.cercle-parisien.com`;
             break;
 
           case 'tarifs':
-            subject = 'Nos tarifs - Cercle Parisien JKD';
-            textContent = `Salut ${first_name},
+            subject = 'Nos formules - Cercle Parisien JKD';
+            textContent = `Bonjour ${first_name},
 
-Voici nos formules :
+J'espère que tu vas bien.
 
-COURS D'ESSAI - 35 euros
-Un cours complet pour decouvrir le JKD. Sans engagement.
+Voici nos différentes formules :
 
-ABONNEMENT ANNUEL - 550 euros
-Soit 46 euros par mois. Acces a tous les cours du samedi.
-Paiement en 1x ou 3x sans frais.
+- Cours d'essai : 35 euros (un cours complet pour découvrir, sans engagement)
+- Abonnement annuel : 550 euros (soit 46 euros par mois, paiement en 1x ou 3x sans frais)
+- Abonnement trimestriel : 220 euros (pour tester sur 3 mois)
 
-ABONNEMENT TRIMESTRIEL - 220 euros
-Pour tester sur 3 mois.
+Pour t'inscrire, tu peux répondre à cet email ou m'appeler directement au 06 50 75 43 89.
 
-Pour t'inscrire, reponds a cet email ou appelle Cedric au 06 50 75 43 89
+N'hésite pas si tu as des questions.
 
-A bientot !
-Cedric - Cercle Parisien JKD`;
+Bien à toi,
+
+Cédric
+
+--
+Cédric ATTICOT DIT RAVINO
+cedric.atticot@live.fr
+06 50 75 43 89
+www.cercle-parisien.com`;
             break;
 
           case 'plan_acces':
-            subject = 'Plan d\'acces - Cercle Parisien JKD';
-            textContent = `Salut ${first_name},
+            subject = 'Comment venir au dojo';
+            textContent = `Bonjour ${first_name},
+
+J'espère que tu vas bien.
 
 Voici comment venir :
 
-ADRESSE
-119 Avenue du General Leclerc, 75014 Paris
+L'adresse : 119 Avenue du Général Leclerc, 75014 Paris
+Google Maps : https://maps.google.com/?q=119+Avenue+General+Leclerc+Paris
 
-GOOGLE MAPS
-https://maps.google.com/?q=119+Avenue+General+Leclerc+Paris
+En métro : Ligne 4, station Alésia, sortie Avenue du Général Leclerc. C'est à 2 minutes à pied.
 
-EN METRO
-Ligne 4, station Alesia
-Sortie Avenue du General Leclerc, c'est a 2 minutes a pied.
+En bus : Lignes 28, 38, 68 - arrêt Alésia.
 
-EN BUS
-Lignes 28, 38, 68 - arret Alesia
+À ton arrivée, entre dans la cour de l'immeuble, le dojo est au fond à gauche.
 
-A L'ARRIVEE
-Entre dans la cour de l'immeuble, le dojo est au fond a gauche.
+N'hésite pas à m'appeler au 06 50 75 43 89 si tu as du mal à trouver.
 
-A samedi !
-Cedric - Cercle Parisien JKD`;
+Au plaisir de te voir samedi.
+
+Bien à toi,
+
+Cédric
+
+--
+Cédric ATTICOT DIT RAVINO
+cedric.atticot@live.fr
+06 50 75 43 89
+www.cercle-parisien.com`;
             break;
 
           default:
