@@ -1142,7 +1142,6 @@ app.post('/api/validate-promo', async (req, res) => {
     console.error('Erreur validation promo:', error);
     res.status(500).json({ valid: false, error: 'Erreur serveur' });
   }
-}
 });
 
 /**
