@@ -13,6 +13,7 @@ COPY backend/ .
 
 # Copy frontend files to public directory
 COPY index.html ./public/
+COPY public/ ./public/
 COPY assets/ ./public/assets/
 
 # Expose port
