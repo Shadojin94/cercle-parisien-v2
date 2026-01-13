@@ -144,6 +144,9 @@ app.use((req, res, next) => {
   next();
 });
 
+// Import du module Chatbot
+const { chatWithMartin } = require('./chatbot/openai');
+
 // Fonction pour générer le fichier ICS du rendez-vous
 function generateICS(firstName, email) {
   const start = [2025, 9, 27, 14, 0]; // 27/09/2025 14:00
@@ -1138,6 +1141,46 @@ app.post('/api/validate-promo', async (req, res) => {
   } catch (error) {
     console.error('Erreur validation promo:', error);
     res.status(500).json({ valid: false, error: 'Erreur serveur' });
+  }
+}
+});
+
+/**
+ * POST /api/chat
+ * Route pour le Chatbot Martin Li
+ */
+app.post('/api/chat', async (req, res) => {
+  try {
+    const { messages } = req.body;
+
+    if (!messages || !Array.isArray(messages)) {
+      return res.status(400).json({ error: 'Format de messages invalide' });
+    }
+
+    // Protection basique : vérifier l'origine pour éviter l'abus externe
+    const origin = req.headers.origin;
+    // En dev (localhost) ou prod (cercle-parisien)
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://www.cercle-parisien.com',
+      'https://cpjkd-v2.live.cercleonline.com',
+      process.env.FRONTEND_URL
+    ].filter(Boolean);
+
+    // Si l'origine n'est pas dans la liste (et qu'on n'est pas en curl/postman sans origin), on pourrait bloquer
+    // Ici on log juste pour monitorer
+    if (origin && !allowedOrigins.some(o => origin.startsWith(o))) {
+      console.warn('Origin suspect pour /api/chat:', origin);
+    }
+
+    // Appel à OpenAI
+    const response = await chatWithMartin(messages);
+    res.json({ reply: response });
+
+  } catch (error) {
+    console.error('Erreur API Chat:', error);
+    res.status(500).json({ error: 'Erreur interne du chatbot' });
   }
 });
 
