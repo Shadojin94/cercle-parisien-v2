@@ -312,7 +312,7 @@ function createToolHandlers(deps) {
     },
 
     /**
-     * Envoie des informations par email
+     * Envoie des informations par email (texte brut, anti-spam)
      */
     async send_info_by_email({ email, first_name, info_type }) {
       console.log(`📧 Tool send_info_by_email appelé:`, { email, first_name, info_type });
@@ -325,90 +325,81 @@ function createToolHandlers(deps) {
       }
 
       try {
-        // Préparer le contenu selon le type
-        let subject, htmlContent;
-
-        const kb = KNOWLEDGE_BASE;
+        let subject, textContent;
 
         switch (info_type) {
           case 'infos_pratiques':
-            subject = 'Informations pratiques - Cercle Parisien JKD';
-            htmlContent = `
-              <h1>Salut ${first_name} !</h1>
-              <p>Voici les infos pratiques pour venir nous rejoindre :</p>
+            subject = 'Infos pratiques - Cercle Parisien JKD';
+            textContent = `Salut ${first_name},
 
-              <h2>📍 Adresse</h2>
-              <p>${kb.localisation.adresse}</p>
-              <p><a href="${kb.localisation.google_maps}">Voir sur Google Maps</a></p>
+Voici les infos pour venir nous rejoindre :
 
-              <h2>🚇 Accès</h2>
-              <p>Métro : ${kb.localisation.metro.join(' ou ')}</p>
+ADRESSE
+119 Avenue du General Leclerc, 75014 Paris
+Google Maps : https://maps.google.com/?q=119+Avenue+General+Leclerc+Paris
 
-              <h2>📅 Horaires</h2>
-              <p>${kb.horaires.cours_regulier}</p>
-              <p>Arrive vers ${kb.horaires.ouverture_salle} pour te changer tranquillement.</p>
+ACCES
+Metro Alesia (ligne 4), sortie Avenue du General Leclerc
 
-              <h2>👕 Équipement</h2>
-              <p>${kb.equipement.resume_debutant}</p>
+HORAIRES
+Cours le samedi de 14h a 16h
+Arrive vers 13h45 pour te changer tranquillement.
 
-              <h2>🏠 Vestiaires</h2>
-              <p>${kb.vestiaires.description}</p>
+EQUIPEMENT
+Tenue de sport (jogging, t-shirt). Pieds nus ou chaussures de sport propres.
 
-              <p>Des questions ? Appelle Cédric au ${kb.contact.telephone}</p>
+Des questions ? Appelle Cedric au 06 50 75 43 89
 
-              <p>À samedi !<br>L'équipe du Cercle Parisien JKD</p>
-            `;
+A samedi !
+Cedric - Cercle Parisien JKD`;
             break;
 
           case 'tarifs':
             subject = 'Nos tarifs - Cercle Parisien JKD';
-            htmlContent = `
-              <h1>Salut ${first_name} !</h1>
-              <p>Voici nos formules :</p>
+            textContent = `Salut ${first_name},
 
-              <h2>🥋 Cours d'essai - ${kb.tarifs.cours_essai.prix_affiche}</h2>
-              <p>${kb.tarifs.cours_essai.description}</p>
-              <p>${kb.tarifs.cours_essai.inclus}</p>
+Voici nos formules :
 
-              <h2>⭐ Abonnement annuel - ${kb.tarifs.abonnement_annuel.prix_affiche}</h2>
-              <p>${kb.tarifs.abonnement_annuel.description}</p>
-              <p>Soit seulement ${kb.tarifs.abonnement_annuel.prix_mensuel} !</p>
-              <p>Inclus : ${kb.tarifs.abonnement_annuel.inclus.join(', ')}</p>
+COURS D'ESSAI - 35 euros
+Un cours complet pour decouvrir le JKD. Sans engagement.
 
-              <h2>📆 Abonnement trimestriel - ${kb.tarifs.abonnement_trimestriel.prix_affiche}</h2>
-              <p>${kb.tarifs.abonnement_trimestriel.description}</p>
+ABONNEMENT ANNUEL - 550 euros
+Soit 46 euros par mois. Acces a tous les cours du samedi.
+Paiement en 1x ou 3x sans frais.
 
-              <p>Pour t'inscrire, réponds à cet email ou appelle Cédric au ${kb.contact.telephone}</p>
+ABONNEMENT TRIMESTRIEL - 220 euros
+Pour tester sur 3 mois.
 
-              <p>À bientôt !<br>L'équipe du Cercle Parisien JKD</p>
-            `;
+Pour t'inscrire, reponds a cet email ou appelle Cedric au 06 50 75 43 89
+
+A bientot !
+Cedric - Cercle Parisien JKD`;
             break;
 
           case 'plan_acces':
-            subject = 'Plan d\'accès - Cercle Parisien JKD';
-            htmlContent = `
-              <h1>Salut ${first_name} !</h1>
-              <p>Voici comment venir :</p>
+            subject = 'Plan d\'acces - Cercle Parisien JKD';
+            textContent = `Salut ${first_name},
 
-              <h2>📍 Adresse</h2>
-              <p><strong>${kb.localisation.adresse}</strong></p>
-              <p><a href="${kb.localisation.google_maps}" style="background:#c8102e;color:white;padding:10px 20px;text-decoration:none;border-radius:5px;">Ouvrir dans Google Maps</a></p>
+Voici comment venir :
 
-              <h2>🚇 En métro</h2>
-              <p>${kb.localisation.metro.join('<br>')}</p>
+ADRESSE
+119 Avenue du General Leclerc, 75014 Paris
 
-              <h2>🚌 En bus</h2>
-              <p>Lignes : ${kb.localisation.bus.join(', ')}</p>
+GOOGLE MAPS
+https://maps.google.com/?q=119+Avenue+General+Leclerc+Paris
 
-              <h2>🚗 En voiture</h2>
-              <p>${kb.localisation.acces_voiture}</p>
-              <p>Parking : ${kb.localisation.parking}</p>
+EN METRO
+Ligne 4, station Alesia
+Sortie Avenue du General Leclerc, c'est a 2 minutes a pied.
 
-              <h2>🚪 À l'arrivée</h2>
-              <p>${kb.localisation.instructions}</p>
+EN BUS
+Lignes 28, 38, 68 - arret Alesia
 
-              <p>À samedi !<br>L'équipe du Cercle Parisien JKD</p>
-            `;
+A L'ARRIVEE
+Entre dans la cour de l'immeuble, le dojo est au fond a gauche.
+
+A samedi !
+Cedric - Cercle Parisien JKD`;
             break;
 
           default:
@@ -418,12 +409,12 @@ function createToolHandlers(deps) {
             };
         }
 
-        // Envoyer l'email
+        // Envoyer l'email en texte brut (meilleure delivrabilite)
         const mailOptions = {
           from: process.env.SMTP_FROM || process.env.SMTP_USER,
           to: email,
           subject,
-          html: htmlContent
+          text: textContent  // Texte brut, pas de HTML
         };
 
         const info = await transporter.sendMail(mailOptions);
@@ -434,13 +425,13 @@ function createToolHandlers(deps) {
           await upsertLead({
             email: email.toLowerCase().trim(),
             first_name: first_name.trim(),
-            status: 'new'  // Valeur valide PocketBase
+            status: 'new'
           });
         }
 
         return {
           success: true,
-          message: `C'est envoyé ! Vérifie ta boîte mail (et les spams au cas où).`
+          message: `C'est envoye ! Verifie ta boite mail.`
         };
 
       } catch (err) {
