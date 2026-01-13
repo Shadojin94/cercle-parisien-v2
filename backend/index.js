@@ -127,10 +127,13 @@ app.use(cors({
 
 app.options('*', cors());
 
-// Pas de serve statique en prod - Nginx gère le frontend
-if (process.env.NODE_ENV !== 'production') {
-  app.use(express.static(path.join(__dirname, '../httpdocs')));
-}
+// Serve static files from public directory
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Catch-all pour SPA: renvoyer index.html pour les routes frontend
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 // Middleware pour parser le JSON et les données de formulaire
 app.use(express.json({ limit: '10mb' }));
