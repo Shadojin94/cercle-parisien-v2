@@ -12,9 +12,22 @@ const openai = new OpenAI({
   baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
 });
 
-// Modèle à utiliser - GPT-4o pour le function calling optimal
+// Modèle à utiliser
+// Note: Si tu utilises un provider alternatif (OpenRouter, etc.), configure OPENAI_MODEL dans .env
 const MODEL_NAME = process.env.OPENAI_MODEL || 'gpt-4o';
+
+// Mode lite : désactive les tools (utile si le provider ne les supporte pas bien)
+// Active avec CHATBOT_LITE_MODE=true dans .env
+const LITE_MODE = process.env.CHATBOT_LITE_MODE === 'true';
+
+// Vérifier si le modèle supporte le function calling
+const SUPPORTS_TOOLS = !LITE_MODE && !MODEL_NAME.includes('o1') && !MODEL_NAME.includes('o3');
+
 console.log(`🤖 Agent Cercle Parisien initialisé avec le modèle : ${MODEL_NAME}`);
+console.log(`🔧 Function calling: ${SUPPORTS_TOOLS ? 'activé' : 'désactivé'}${LITE_MODE ? ' (mode lite)' : ''}`);
+if (!process.env.OPENAI_API_KEY) {
+  console.warn('⚠️ OPENAI_API_KEY non définie !');
+}
 
 // ============================================
 // SYSTEM PROMPT - EXPERT CONVERSION
@@ -114,24 +127,31 @@ async function chatWithAgent(messages, deps = {}) {
       ...messages
     ];
 
-    // Premier appel à OpenAI
-    let response = await openai.chat.completions.create({
+    // Configuration de l'appel OpenAI
+    const requestConfig = {
       model: MODEL_NAME,
       messages: conversation,
-      tools: TOOLS_DEFINITIONS,
-      tool_choice: 'auto',
       temperature: 0.8,
       max_tokens: 500,
-    });
+    };
+
+    // Ajouter les tools seulement si le modèle les supporte
+    if (SUPPORTS_TOOLS) {
+      requestConfig.tools = TOOLS_DEFINITIONS;
+      requestConfig.tool_choice = 'auto';
+    }
+
+    // Premier appel à OpenAI
+    let response = await openai.chat.completions.create(requestConfig);
 
     let assistantMessage = response.choices[0].message;
     let actions = []; // Pour stocker les actions effectuées (liens de paiement, etc.)
 
-    // Boucle de traitement des tool calls
+    // Boucle de traitement des tool calls (seulement si tools supportés)
     let iterations = 0;
     const maxIterations = 5; // Sécurité anti-boucle infinie
 
-    while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0 && iterations < maxIterations) {
+    while (SUPPORTS_TOOLS && assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0 && iterations < maxIterations) {
       iterations++;
       console.log(`🔧 Iteration ${iterations}: ${assistantMessage.tool_calls.length} tool(s) à exécuter`);
 
@@ -167,14 +187,17 @@ async function chatWithAgent(messages, deps = {}) {
       }
 
       // Rappeler OpenAI pour obtenir la réponse finale
-      response = await openai.chat.completions.create({
+      const followUpConfig = {
         model: MODEL_NAME,
         messages: conversation,
-        tools: TOOLS_DEFINITIONS,
-        tool_choice: 'auto',
         temperature: 0.8,
         max_tokens: 500,
-      });
+      };
+      if (SUPPORTS_TOOLS) {
+        followUpConfig.tools = TOOLS_DEFINITIONS;
+        followUpConfig.tool_choice = 'auto';
+      }
+      response = await openai.chat.completions.create(followUpConfig);
 
       assistantMessage = response.choices[0].message;
     }
@@ -198,7 +221,15 @@ async function chatWithAgent(messages, deps = {}) {
     };
 
   } catch (error) {
-    console.error('❌ Erreur OpenAI:', error.message);
+    // Logging détaillé pour débugger
+    console.error('❌ Erreur OpenAI complète:', {
+      message: error.message,
+      status: error.status,
+      code: error.code,
+      type: error.type,
+      // Si c'est une erreur de l'API, afficher les détails
+      response: error.response?.data || error.error || null
+    });
 
     // Message d'erreur naturel
     const fallbackMessages = [
