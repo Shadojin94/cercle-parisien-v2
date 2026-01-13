@@ -113,7 +113,7 @@ app.use(helmet({
       defaultSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://rsms.me", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://rsms.me", "https://fonts.gstatic.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://js.stripe.com", "https://cdnjs.cloudflare.com"],
       imgSrc: ["'self'", "data:", "blob:", "https:", "http:"],
       frameSrc: ["'self'", "https://www.youtube.com", "https://js.stripe.com"],
       connectSrc: ["'self'", "https://api.stripe.com", process.env.POCKETBASE_URL || "https://pb.cercle-parisien.com"]
