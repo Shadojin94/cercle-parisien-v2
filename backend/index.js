@@ -823,21 +823,14 @@ app.post('/api/send-rib', async (req, res) => {
     }
 
     // Fetch lead
-    const { data: lead, error: leadError } = await supabase
-      .from('leads')
-      .select('first_name, phone')
-      .eq('id', leadId)
-      .single();
+    const { data: lead, error: leadError } = await getLeadById(leadId);
 
     if (leadError || !lead) {
       return res.status(500).json({ error: 'Lead not found' });
     }
 
     // Update status
-    await supabase
-      .from('leads')
-      .update({ status: 'bank_transfer', updated_at: new Date().toISOString() })
-      .eq('id', leadId);
+    await updateLeadStatus(leadId, 'bank_transfer');
 
     // RIB details
     const ribDetails = {
@@ -1057,7 +1050,7 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: '1.0.0',
     domain: 'cercle-parisien.com',
-    supabase: supabase ? 'configured' : 'not configured'
+    pocketbase: pb ? 'configured' : 'not configured'
   });
 });
 
