@@ -1,15 +1,23 @@
 /**
- * Chatbot Martin - Frontend Widget (Refonte UX/UI CPJKD 2026)
+ * Agent de Conversion - Cercle Parisien de Jeet Kune Do
+ * Widget Chatbot avec gestion des sessions et actions (liens de paiement)
  * Design: Rouge/Noir/Blanc, Animations GSAP, Responsive Mobile First
  */
 
 (function () {
   // Configuration
   const API_URL = '/api/chat';
-  const CHAT_TITLE = "Martin - Assistant JKD";
+  const CHAT_TITLE = "Cercle Parisien JKD";
   const BRAND_RED = "#c8102e";
   const BRAND_BLACK = "#111111";
-  const WELCOME_MESSAGE = "Salut ! Moi c'est Martin. Tu veux tester un cours ou tu as une question ?";
+  const WELCOME_MESSAGE = "Salut ! On est le Cercle Parisien de Jeet Kune Do. Tu cherches des infos sur nos cours ou tu veux tester ?";
+
+  // Session ID - persiste pendant la visite
+  let sessionId = sessionStorage.getItem('cpjkd_session_id');
+  if (!sessionId) {
+    sessionId = `sess_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    sessionStorage.setItem('cpjkd_session_id', sessionId);
+  }
 
   // Charger GSAP dynamiquement
   const scriptGsap = document.createElement('script');
@@ -47,10 +55,17 @@
         outline: none;
         position: relative;
         z-index: 20;
+        animation: mart-pulse 2s infinite;
+      }
+
+      @keyframes mart-pulse {
+        0%, 100% { box-shadow: 0 4px 20px rgba(200, 16, 46, 0.4); }
+        50% { box-shadow: 0 4px 30px rgba(200, 16, 46, 0.6); }
       }
 
       #mart-toggle:hover {
         transform: scale(1.1) rotate(5deg);
+        animation: none;
       }
 
       #mart-toggle svg {
@@ -130,7 +145,7 @@
         font-weight: 600;
         letter-spacing: -0.02em;
       }
-      
+
       .mart-info span {
         font-size: 12px;
         opacity: 0.8;
@@ -185,6 +200,7 @@
         line-height: 1.5;
         position: relative;
         box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        word-wrap: break-word;
       }
 
       .mart-msg.bot {
@@ -209,6 +225,30 @@
         font-weight: 600;
       }
 
+      .mart-msg.bot a {
+        color: ${BRAND_RED};
+      }
+
+      /* Bouton d'action (lien de paiement) */
+      .mart-action-btn {
+        display: inline-block;
+        background: ${BRAND_RED};
+        color: white !important;
+        text-decoration: none !important;
+        padding: 12px 24px;
+        border-radius: 25px;
+        font-weight: 600;
+        margin-top: 10px;
+        text-align: center;
+        transition: all 0.2s;
+        box-shadow: 0 4px 15px rgba(200, 16, 46, 0.3);
+      }
+
+      .mart-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(200, 16, 46, 0.4);
+      }
+
       /* Typing Indicator */
       .mart-typing {
         display: flex;
@@ -222,7 +262,7 @@
         opacity: 0;
         display: none;
       }
-      
+
       .mart-dot {
         width: 8px;
         height: 8px;
@@ -230,10 +270,10 @@
         border-radius: 50%;
         animation: martBounce 1.4s infinite ease-in-out both;
       }
-      
+
       .mart-dot:nth-child(1) { animation-delay: -0.32s; }
       .mart-dot:nth-child(2) { animation-delay: -0.16s; }
-      
+
       @keyframes martBounce {
         0%, 80%, 100% { transform: scale(0); }
         40% { transform: scale(1); }
@@ -306,11 +346,11 @@
           height: 100%;
           max-height: 100%;
           border-radius: 0;
-          z-index: 10001; /* Above toggle */
+          z-index: 10001;
         }
-        
+
         #mart-widget {
-          bottom: 20px; 
+          bottom: 20px;
           right: 20px;
         }
 
@@ -357,7 +397,7 @@
 
           <form class="mart-footer" id="mart-form">
             <div class="mart-input-wrapper">
-              <input type="text" id="mart-input" placeholder="Écrivez votre message..." autocomplete="off" />
+              <input type="text" id="mart-input" placeholder="Posez votre question..." autocomplete="off" />
               <button type="submit" id="mart-send">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20">
                   <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke-linecap="round" stroke-linejoin="round"/>
@@ -435,17 +475,38 @@
   toggleBtn.addEventListener('click', toggleChat);
   closeBtn.addEventListener('click', toggleChat);
 
-  // Add Message
-  const addMessage = (role, text) => {
+  // Add Message avec support des actions (liens de paiement)
+  const addMessage = (role, text, actions = []) => {
     const div = document.createElement('div');
     div.className = `mart-msg ${role}`;
 
-    // Link detection
-    const linkified = text.replace(
-      /(https?:\/\/[^\s]+)/g,
-      '<a href="$1" target="_blank">$1</a>'
+    // Transformer les URLs en liens cliquables
+    let content = text.replace(
+      /(https?:\/\/[^\s<]+)/g,
+      '<a href="$1" target="_blank" rel="noopener">$1</a>'
     );
-    div.innerHTML = linkified;
+
+    div.innerHTML = content;
+
+    // Ajouter des boutons d'action si présents (liens de paiement)
+    if (actions && actions.length > 0) {
+      actions.forEach(action => {
+        if (action.type === 'payment_link' && action.url) {
+          const btnContainer = document.createElement('div');
+          btnContainer.style.marginTop = '12px';
+
+          const btn = document.createElement('a');
+          btn.href = action.url;
+          btn.target = '_blank';
+          btn.rel = 'noopener';
+          btn.className = 'mart-action-btn';
+          btn.textContent = `Réserver (${action.price}€)`;
+
+          btnContainer.appendChild(btn);
+          div.appendChild(btnContainer);
+        }
+      });
+    }
 
     messagesBody.insertBefore(div, typingIndicator);
     messagesBody.scrollTop = messagesBody.scrollHeight;
@@ -488,24 +549,34 @@
       const res = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: history })
+        body: JSON.stringify({
+          messages: history,
+          sessionId: sessionId
+        })
       });
       const data = await res.json();
 
       showTyping(false);
       sendBtn.disabled = false;
 
+      // Mettre à jour le sessionId si le serveur en renvoie un nouveau
+      if (data.sessionId) {
+        sessionId = data.sessionId;
+        sessionStorage.setItem('cpjkd_session_id', sessionId);
+      }
+
       if (data.reply) {
-        addMessage('bot', data.reply);
+        // Ajouter le message avec les actions potentielles
+        addMessage('bot', data.reply, data.actions || []);
         history.push({ role: 'assistant', content: data.reply });
       } else {
-        addMessage('bot', "Je n'ai pas compris, peux-tu répéter ?");
+        addMessage('bot', "Je n'ai pas compris, tu peux reformuler ?");
       }
     } catch (err) {
-      console.error(err);
+      console.error('Erreur chatbot:', err);
       showTyping(false);
       sendBtn.disabled = false;
-      addMessage('bot', "Erreur de connexion 🔴");
+      addMessage('bot', "Oups, petit souci de connexion. Tu peux réessayer ?");
     }
   });
 

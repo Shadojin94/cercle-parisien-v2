@@ -144,8 +144,31 @@ app.use((req, res, next) => {
   next();
 });
 
-// Import du module Chatbot
-const { chatWithMartin } = require('./chatbot/openai');
+// Import du module Chatbot (Agent de Conversion)
+const { chatWithAgent } = require('./chatbot/openai');
+
+// ===============================
+// GESTION DES SESSIONS CHATBOT
+// ===============================
+
+// Map pour stocker les sessions de conversation
+const chatSessions = new Map();
+const SESSION_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+// Nettoyage périodique des sessions expirées
+setInterval(() => {
+  const now = Date.now();
+  let cleaned = 0;
+  for (const [sessionId, session] of chatSessions.entries()) {
+    if (now - session.lastActivity > SESSION_TIMEOUT) {
+      chatSessions.delete(sessionId);
+      cleaned++;
+    }
+  }
+  if (cleaned > 0) {
+    console.log(`🧹 Nettoyage sessions chatbot: ${cleaned} session(s) expirée(s)`);
+  }
+}, 5 * 60 * 1000); // Toutes les 5 minutes
 
 // Fonction pour générer le fichier ICS du rendez-vous
 function generateICS(firstName, email) {
@@ -1146,11 +1169,12 @@ app.post('/api/validate-promo', async (req, res) => {
 
 /**
  * POST /api/chat
- * Route pour le Chatbot Martin Li
+ * Route pour l'Agent de Conversion Chatbot
+ * Gère les sessions et passe les dépendances aux tools
  */
 app.post('/api/chat', async (req, res) => {
   try {
-    const { messages } = req.body;
+    const { messages, sessionId } = req.body;
 
     if (!messages || !Array.isArray(messages)) {
       return res.status(400).json({ error: 'Format de messages invalide' });
@@ -1158,7 +1182,6 @@ app.post('/api/chat', async (req, res) => {
 
     // Protection basique : vérifier l'origine pour éviter l'abus externe
     const origin = req.headers.origin;
-    // En dev (localhost) ou prod (cercle-parisien)
     const allowedOrigins = [
       'http://localhost:5173',
       'http://localhost:3000',
@@ -1167,15 +1190,56 @@ app.post('/api/chat', async (req, res) => {
       process.env.FRONTEND_URL
     ].filter(Boolean);
 
-    // Si l'origine n'est pas dans la liste (et qu'on n'est pas en curl/postman sans origin), on pourrait bloquer
-    // Ici on log juste pour monitorer
     if (origin && !allowedOrigins.some(o => origin.startsWith(o))) {
       console.warn('Origin suspect pour /api/chat:', origin);
     }
 
-    // Appel à OpenAI
-    const response = await chatWithMartin(messages);
-    res.json({ reply: response });
+    // Gestion des sessions côté serveur
+    let session;
+    if (sessionId && chatSessions.has(sessionId)) {
+      session = chatSessions.get(sessionId);
+      session.lastActivity = Date.now();
+      // Utiliser l'historique serveur pour plus de fiabilité
+      // On prend le dernier message du client et on l'ajoute à l'historique
+      const lastUserMessage = messages[messages.length - 1];
+      if (lastUserMessage && lastUserMessage.role === 'user') {
+        session.messages.push(lastUserMessage);
+      }
+    } else {
+      // Nouvelle session
+      const newSessionId = sessionId || `sess_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+      session = {
+        id: newSessionId,
+        messages: messages,
+        lastActivity: Date.now(),
+        createdAt: Date.now()
+      };
+      chatSessions.set(newSessionId, session);
+    }
+
+    // Dépendances à passer aux tools
+    const deps = {
+      pb,
+      stripe,
+      transporter,
+      upsertLead,
+      generateResumeToken
+    };
+
+    // Appel à l'agent avec les dépendances
+    const response = await chatWithAgent(session.messages, deps);
+
+    // Ajouter la réponse de l'assistant à l'historique de session
+    if (response.reply) {
+      session.messages.push({ role: 'assistant', content: response.reply });
+    }
+
+    // Réponse au client
+    res.json({
+      reply: response.reply,
+      sessionId: session.id,
+      actions: response.actions || []
+    });
 
   } catch (error) {
     console.error('Erreur API Chat:', error);

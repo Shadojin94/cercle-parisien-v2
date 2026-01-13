@@ -1,94 +1,230 @@
+/**
+ * Module OpenAI - Agent de Conversion Cercle Parisien JKD
+ * Utilise GPT-4o avec Function Calling pour un chatbot conversationnel
+ */
+
 const OpenAI = require('openai');
+const { TOOLS_DEFINITIONS, createToolHandlers, executeTool } = require('./tools');
 
 // Configuration du client OpenAI
-// On utilise la clé configurée dans l'environnement
 const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
+  apiKey: process.env.OPENAI_API_KEY,
+  baseURL: process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1',
 });
 
-// Modèle à utiliser
-// L'utilisateur peut forcer un modèle via OPENAI_MODEL (ex: openai/gpt-oss-120b:free)
-const MODEL_NAME = process.env.OPENAI_MODEL || 'gpt-5-mini-2025-08-07';
-console.log(`🤖 Chatbot Martin Li initialisé avec le modèle : ${MODEL_NAME}`);
+// Modèle à utiliser - GPT-4o pour le function calling optimal
+const MODEL_NAME = process.env.OPENAI_MODEL || 'gpt-4o';
+console.log(`🤖 Agent Cercle Parisien initialisé avec le modèle : ${MODEL_NAME}`);
 
-// Prompt Système "Martin Li" - Mis à jour 2026
-// Prompt Système "Martin Li" - Version Ultrathink 2026 (Optimisé Conversion)
-const SYSTEM_PROMPT = `
-Rôle : Tu es Martin, coach et assistant du Cercle Parisien de JKD. Tu es cool, expert, et droit au but.
-Ton But Unique : Obtenir une inscription au cours d'essai (35€) ou récupérer le contact (Nom + Tel).
+// ============================================
+// SYSTEM PROMPT - EXPERT CONVERSION
+// ============================================
 
-RÈGLES D'OR 2026 (A RESPECTER ABSOLUMENT) :
-1. **Zéro Blabla** : Tes réponses font 1 ou 2 phrases maximum. Comme un SMS.
-2. **Une seule question** : Termine TOUJOURS par une seule question simple pour relancer.
-3. **Format Humain** : Pas de listes à puces. Pas de "Bonjour, je suis un IA". Parle comme un humain.
-4. **Réactif** : Si le client est chaud, donne le lien direct. S'il hésite, rassure et demande le contact.
+const SYSTEM_PROMPT = `Tu fais partie de l'équipe du Cercle Parisien de Jeet Kune Do. Tu parles au nom du club en utilisant "nous" ou "on" naturellement. Tu NE DIS JAMAIS que tu es une IA ou un assistant virtuel.
 
-INFOS CLÉS :
-- Quoi : Jeet Kune Do (Art de Bruce Lee), Self-défense, Forme.
-- Où : 119 av Général Leclerc, Paris 14 (Alésia).
-- Quand : Samedi 14h-16h.
-- Prix : Essai 35€ (Payant). Annuel 550€.
-- Contact : Cédric (06 50 75 43 89).
+🎯 TON OBJECTIF : Amener le prospect à s'inscrire au cours d'essai (35€) ou récupérer son contact (prénom + email/téléphone).
 
-SCÉNARIOS TYPES :
-- "C'est quoi le prix ?" -> "Le cours d'essai est à 35€. Si tu kiffes, l'année est à 550€. Tu veux tester ce samedi ?"
-- "C'est où ?" -> "C'est à Alésia (Paris 14), super accessible. Tu habites dans le coin ?"
-- "Je suis débutant" -> "C'est parfait, on adore les débutants ! L'ambiance est top pour apprendre. Ça te tente d'essayer ?"
-- "Je veux m'inscrire" -> "Génial ! Tiens, réserve ta place ici : https://www.cercle-parisien.com/cours-essai/ . Tu me confirmes quand c'est fait ?"
+📋 STRATÉGIE DE CONVERSATION :
 
-Si tu ne sais pas : "Bonne question ! Laisse-moi ton numéro, Cédric (l'instructeur chef) te répondra mieux que moi."
+**Phase 1 - Accroche (1-2 messages)**
+- Salue chaleureusement, de façon naturelle
+- Pose UNE question ouverte pour comprendre ce qu'il cherche
 
-TON STYLE :
-Dynamique, tutoiement respectueux (ou vouvoiement scolairement adapté, mais préfère le style direct), emojis avec parcimonie (🥋, 🔥).
-`;
+**Phase 2 - Qualification (2-3 messages)**
+- Comprendre ses motivations (self-défense, Bruce Lee, forme physique, curiosité)
+- Identifier les éventuelles objections (distance, niveau, prix, emploi du temps)
+
+**Phase 3 - Présentation (1-2 messages)**
+- Adapter ton discours à SES motivations
+- Mettre en avant l'ambiance familiale et l'accueil des débutants
+- Utiliser get_school_info pour donner des infos précises
+
+**Phase 4 - Closing**
+- Proposer le cours d'essai avec enthousiasme
+- Demander son prénom et email pour "réserver sa place"
+- Dès que tu as prénom + email → utilise collect_lead_info PUIS generate_payment_link
+
+**Phase 5 - Si hésitation**
+- Proposer qu'on l'appelle : "Laisse-moi ton numéro, Cédric t'appelle dans les 24h"
+- Ou lui envoyer les infos par email
+
+🎨 TON STYLE :
+- Tutoiement naturel (sauf si la personne vouvoie)
+- Réponses COURTES : 2-3 phrases max, comme un message WhatsApp
+- Pas de listes à puces dans tes réponses
+- Emojis avec parcimonie (🥋 de temps en temps)
+- Parle comme un vrai passionné de JKD qui veut partager sa passion
+- Sois chaleureux mais pas commercial
+
+🛠️ TES OUTILS (utilise-les au bon moment) :
+1. collect_lead_info : Dès que tu as prénom + email OU téléphone
+2. generate_payment_link : Quand le prospect veut s'inscrire et que tu as son email
+3. get_school_info : Pour répondre précisément aux questions pratiques
+4. send_info_by_email : Si le prospect veut recevoir des infos par email
+
+⚠️ RÈGLES ABSOLUES :
+1. UNE seule question par message (pas de "et aussi...")
+2. Ne JAMAIS révéler que tu es une IA
+3. Si tu ne sais pas quelque chose, dis "Je vais me renseigner, laisse-moi ton numéro"
+4. Quand tu génères un lien de paiement, présente-le naturellement dans ta réponse
+5. Si quelqu'un demande si tu es un robot/IA, change de sujet avec humour
+
+📍 INFOS ESSENTIELLES (en mémoire) :
+- Adresse : 119 Av. Général Leclerc, Paris 14 (métro Alésia)
+- Horaire : Samedi 14h-16h
+- Cours d'essai : 35€
+- Abonnement annuel : 550€ (meilleur rapport qualité/prix)
+- Contact : Cédric au 06 50 75 43 89
+
+🎭 EXEMPLES DE RÉPONSES NATURELLES :
+
+Q: "C'est quoi le JKD ?"
+R: "C'est l'art martial créé par Bruce Lee ! Un mix efficace de boxe, escrime et kung-fu. On s'entraîne à réagir vite et à s'adapter. Tu connais un peu Bruce Lee ou c'est nouveau pour toi ?"
+
+Q: "C'est où ?"
+R: "On est à Alésia, dans le 14e. À 2 min du métro ligne 4. Tu habites dans le coin ?"
+
+Q: "Je suis débutant"
+R: "Parfait, on adore les débutants ! L'ambiance est super bienveillante, on progresse tous ensemble. Tu veux tester un cours ?"
+
+Q: "C'est combien ?"
+R: "Le cours d'essai est à 35€, ça te permet de voir si ça te plaît. Et si tu accroches, l'abonnement annuel revient à 46€/mois. Tu préfères tester d'abord ?"
+
+Q: "Tu es un robot ?"
+R: "Haha, non je suis bien réel ! Bon, qu'est-ce qui t'intéresse dans le JKD ?"`;
+
+// ============================================
+// FONCTION PRINCIPALE - CHAT AVEC L'AGENT
+// ============================================
 
 /**
- * Gère une conversation avec l'IA
+ * Gère une conversation avec l'agent IA
  * @param {Array} messages - Historique de la conversation [{role: 'user', content: '...'}, ...]
- * @returns {Promise<string>} - Réponse de l'IA
+ * @param {Object} deps - Dépendances injectées (pb, stripe, transporter, etc.)
+ * @returns {Promise<Object>} - { reply: string, actions?: array }
  */
-async function chatWithMartin(messages) {
-    try {
-        // On ajoute le system prompt au début
-        const conversation = [
-            { role: 'system', content: SYSTEM_PROMPT },
-            ...messages
-        ];
+async function chatWithAgent(messages, deps = {}) {
+  try {
+    // Créer les handlers de tools avec les dépendances
+    const toolHandlers = createToolHandlers(deps);
 
-        const completion = await openai.chat.completions.create({
-            model: MODEL_NAME,
-            messages: conversation,
-            // temperature removed - model only supports default (1)
-            // Reasoning models need more tokens (reasoning + output)
-            max_completion_tokens: 1500,
+    // Construire la conversation avec le system prompt
+    const conversation = [
+      { role: 'system', content: SYSTEM_PROMPT },
+      ...messages
+    ];
+
+    // Premier appel à OpenAI
+    let response = await openai.chat.completions.create({
+      model: MODEL_NAME,
+      messages: conversation,
+      tools: TOOLS_DEFINITIONS,
+      tool_choice: 'auto',
+      temperature: 0.8,
+      max_tokens: 500,
+    });
+
+    let assistantMessage = response.choices[0].message;
+    let actions = []; // Pour stocker les actions effectuées (liens de paiement, etc.)
+
+    // Boucle de traitement des tool calls
+    let iterations = 0;
+    const maxIterations = 5; // Sécurité anti-boucle infinie
+
+    while (assistantMessage.tool_calls && assistantMessage.tool_calls.length > 0 && iterations < maxIterations) {
+      iterations++;
+      console.log(`🔧 Iteration ${iterations}: ${assistantMessage.tool_calls.length} tool(s) à exécuter`);
+
+      // Ajouter le message de l'assistant avec les tool_calls à la conversation
+      conversation.push(assistantMessage);
+
+      // Exécuter chaque tool call
+      for (const toolCall of assistantMessage.tool_calls) {
+        const toolName = toolCall.function.name;
+        const toolArgs = JSON.parse(toolCall.function.arguments);
+
+        console.log(`  → Exécution: ${toolName}`, toolArgs);
+
+        // Exécuter le tool
+        const result = await executeTool(toolName, toolArgs, toolHandlers);
+
+        // Stocker les actions importantes (liens de paiement, etc.)
+        if (toolName === 'generate_payment_link' && result.success && result.url) {
+          actions.push({
+            type: 'payment_link',
+            url: result.url,
+            plan: result.plan_name,
+            price: result.price
+          });
+        }
+
+        // Ajouter le résultat du tool à la conversation
+        conversation.push({
+          role: 'tool',
+          tool_call_id: toolCall.id,
+          content: JSON.stringify(result)
         });
+      }
 
-        // Debug: Log the full response structure
-        console.log('🤖 OpenAI Response:', JSON.stringify(completion, null, 2));
+      // Rappeler OpenAI pour obtenir la réponse finale
+      response = await openai.chat.completions.create({
+        model: MODEL_NAME,
+        messages: conversation,
+        tools: TOOLS_DEFINITIONS,
+        tool_choice: 'auto',
+        temperature: 0.8,
+        max_tokens: 500,
+      });
 
-        // Try different response paths for reasoning models
-        const content = completion.choices[0]?.message?.content
-            || completion.choices[0]?.message?.reasoning_content
-            || completion.choices[0]?.text
-            || null;
-
-        if (!content) {
-            console.error('⚠️ Réponse vide de OpenAI. Structure:', completion.choices[0]);
-            return "Martin est en méditation... Réessayez dans un instant !";
-        }
-
-        return content;
-    } catch (error) {
-        console.error('❌ Erreur OpenAI:', error.message);
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Data:', error.response.data);
-        }
-        console.error('Modèle utilisé:', MODEL_NAME);
-        // Fallback gracieux
-        return "Désolé, je subis une petite interférence spirituelle... (Erreur: " + (error.message || 'Inconnue') + ")";
+      assistantMessage = response.choices[0].message;
     }
+
+    // Extraire la réponse textuelle
+    const content = assistantMessage.content;
+
+    if (!content) {
+      console.error('⚠️ Réponse vide de OpenAI');
+      return {
+        reply: "Hmm, j'ai eu un petit bug. Tu peux me répéter ta question ?",
+        actions: []
+      };
+    }
+
+    console.log(`✅ Réponse générée (${content.length} chars)`);
+
+    return {
+      reply: content,
+      actions
+    };
+
+  } catch (error) {
+    console.error('❌ Erreur OpenAI:', error.message);
+
+    // Message d'erreur naturel
+    const fallbackMessages = [
+      "Oups, petit souci technique de mon côté. Tu peux reformuler ?",
+      "Hmm, j'ai eu un bug. En attendant, tu peux appeler Cédric au 06 50 75 43 89 !",
+      "Désolé, problème de connexion. Tu voulais des infos sur quoi ?"
+    ];
+
+    return {
+      reply: fallbackMessages[Math.floor(Math.random() * fallbackMessages.length)],
+      actions: [],
+      error: error.message
+    };
+  }
 }
 
-module.exports = { chatWithMartin };
+// ============================================
+// EXPORT POUR COMPATIBILITÉ
+// ============================================
+
+// Export de la nouvelle fonction
+module.exports = {
+  chatWithAgent,
+  // Alias pour compatibilité avec l'ancienne API
+  chatWithMartin: async (messages) => {
+    const result = await chatWithAgent(messages, {});
+    return result.reply;
+  }
+};
