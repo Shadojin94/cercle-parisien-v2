@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cercle Parisien de Jeet Kune Do - Cours de JKD à Paris</title>
+    <meta name="description" content="Découvrez le Jeet Kune Do originel de Bruce Lee à Paris. Le Cercle Parisien de JKD propose des cours authentiques pour tous niveaux. Rejoignez-nous pour une transformation." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://www.cercle-parisien.com/">
+    <meta property="og:title" content="Cercle Parisien de Jeet Kune Do - Cours de JKD à Paris">
+    <meta property="og:description" content="Découvrez le Jeet Kune Do originel de Bruce Lee à Paris. Le Cercle Parisien de JKD propose des cours authentiques pour tous niveaux.">
+    <meta property="og:image" content="https://i.imgur.com/k2pZ84J.png">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://www.cercle-parisien.com/">
+    <meta property="twitter:title" content="Cercle Parisien de Jeet Kune Do - Cours de JKD à Paris">
+    <meta property="twitter:description" content="Découvrez le Jeet Kune Do originel de Bruce Lee à Paris. Le Cercle Parisien de JKD propose des cours authentiques pour tous niveaux.">
+    <meta property="twitter:image" content="https://i.imgur.com/k2pZ84J.png">
+
+    <link rel="canonical" href="https://www.cercle-parisien.com/" />
+
+    <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+<script>
+  // On page load or when changing themes, best to add inline in `head` to avoid FOUC
+  // This must match the logic in ThemeProvider.tsx
+  const savedTheme = localStorage.getItem('theme');
+  
+  if (savedTheme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else if (savedTheme === 'light') {
+    document.documentElement.classList.remove('dark');
+  } else {
+    // No saved preference - use time-based default (9h-17h = light)
+    const hour = new Date().getHours();
+    if (hour >= 9 && hour < 17) {
+      document.documentElement.classList.remove('dark');
+    } else {
+      document.documentElement.classList.add('dark');
+    }
+  }
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SportsClub",
+  "name": "Cercle Parisien de Jeet Kune Do",
+  "description": "École d'arts martiaux spécialisée dans l'enseignement du Jeet Kune Do authentique de Bruce Lee à Paris.",
+  "url": "https://www.cercle-parisien.com",
+  "logo": "/assets/images/logo-t-shirt.png",
+  "address": {
+    "@type": "PostalAddress",
+    "addressLocality": "Paris",
+    "addressRegion": "Île-de-France",
+    "postalCode": "75014",
+    "addressCountry": "FR"
+  },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "email": "interceptjkd@hotmail.com",
+    "contactType": "customer service"
+  },
+  "sport": "Jeet Kune Do",
+  "founder": {
+      "@type": "Person",
+      "name": "Sifu Lee Hong Long (Michel Levan)"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/assets/index-Cjgi1teS.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-CzGoCGsH.css">
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

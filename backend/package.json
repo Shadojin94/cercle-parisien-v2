@@ -1,0 +1,37 @@
+{
+  "name": "cercle-parisien-jkd-backend",
+  "version": "1.0.0",
+  "description": "Backend du site Cercle Parisien JKD - Version propre",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.0.0",
+    "stripe": "^13.3.0",
+    "pocketbase": "^0.25.0",
+    "nodemailer": "^6.9.7",
+    "ics": "^3.5.0",
+    "node-cron": "^3.0.2",
+    "node-fetch": "^2.6.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "jkd",
+    "martial-arts",
+    "stripe",
+    "pocketbase",
+    "express",
+    "notifications",
+    "cercle-parisien"
+  ],
+  "author": "Cercle Parisien JKD",
+  "license": "MIT"
+}
