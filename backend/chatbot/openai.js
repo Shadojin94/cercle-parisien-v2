@@ -65,7 +65,7 @@ async function chatWithMartin(messages) {
             model: MODEL_NAME,
             messages: conversation,
             temperature: 0.7, // Créatif mais précis
-            max_tokens: 300,  // Réponses concises
+            max_completion_tokens: 300,  // Réponses concises (Nouvelle syntaxe)
         });
 
         return completion.choices[0].message.content;
