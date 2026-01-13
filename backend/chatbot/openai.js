@@ -9,7 +9,8 @@ const openai = new OpenAI({
 
 // Modèle à utiliser
 // L'utilisateur peut forcer un modèle via OPENAI_MODEL (ex: openai/gpt-oss-120b:free)
-const MODEL_NAME = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+const MODEL_NAME = process.env.OPENAI_MODEL || 'gpt-oss-120b';
+console.log(`🤖 Chatbot Martin Li initialisé avec le modèle : ${MODEL_NAME}`);
 
 // Prompt Système "Martin Li" - Mis à jour 2026
 const SYSTEM_PROMPT = `
