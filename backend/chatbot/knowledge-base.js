@@ -12,7 +12,7 @@ const KNOWLEDGE_BASE = {
     nom_court: "CPJKD",
     discipline: "Jeet Kune Do - L'art martial créé par Bruce Lee",
     philosophie: "Absorber ce qui est utile, rejeter ce qui ne l'est pas, ajouter ce qui vous est propre",
-    fondateur: "Sifu Lee Hong Long (Michel Levan)",
+    fondateur: "Sifu Lee Hong Long (Michel Le Van)",
     instructeur_principal: "Cédric Atticot",
     ambiance: "Familiale, respectueuse, tous niveaux bienvenus",
     description_courte: "On pratique le JKD authentique, celui de Bruce Lee, dans une ambiance conviviale où tout le monde progresse à son rythme."
